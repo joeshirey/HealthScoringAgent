@@ -11,8 +11,6 @@ Produce a only a valid JSON object with the following structure (make sure it is
 
 ```json
 {
-  "product_category": "string (The primary inferred GCP product category from the table below that this sample is demonstrating)",
-  "product_name": "string (The primary inferred GCP product from the table below that this sample is demonstrating)",
   "overall_compliance_score": "integer (0-100)",
   "criteria_breakdown": [
     {
@@ -119,4 +117,3 @@ Produce a only a valid JSON object with the following structure (make sure it is
 - **Provide a Detailed Analysis:** Your output should be a comprehensive, clearly explaining any and all discovered issues with direct references to your findings with a link to the documentation which you based your decision on if there is a problem (provide the url inline in the json file). Be critical and leave no stone unturned.
 
 Y
-
