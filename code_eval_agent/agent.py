@@ -16,71 +16,23 @@ instruction_path = os.path.join(os.path.dirname(__file__), "code_eval_agent_inst
 with open(instruction_path, "r") as f:
     instruction = f.read()
 
-class RegionTagExtractorTool(BaseTool):
-    def __init__(self):
-        super().__init__(
-            name="region_tag_extractor",
-            description="Extracts unique region tags from a string of code.",
-        )
-
-    def execute(self, code: str) -> List[str]:
-        """
-        Extracts unique region tags from a string of code.
-        """
-        region_tags = set()
-        for line in code.splitlines():
-            for match in re.finditer(
-                r"(?:#|\/\/)\s*\[(START|END)\s+(.+?)\]", line
-            ):
-                region_tag = match.group(2).strip()
-                region_tags.add(region_tag)
-        return sorted(list(region_tags))
-
-class LanguageDetectorTool(BaseTool):
-    def __init__(self):
-        super().__init__(
-            name="language_detector",
-            description="Detects the programming language of a code snippet.",
-        )
-
-    def execute(self, code: str) -> str:
-        """
-        Detects the programming language of a code snippet.
-        """
-        # This is a simple heuristic-based detector. A more robust implementation
-        # would use a library like `pygments`.
-        if "import" in code and ("from" in code or "package" in code):
-            return "Java"
-        if "import" in code and "func" in code:
-            return "Go"
-        if "import" in code or "require" in code:
-            return "JavaScript"
-        if "import" in code:
-            return "Python"
-        if "using" in code:
-            return "C#"
-        if "#include" in code:
-            return "C++"
-        if "require" in code:
-            return "Ruby"
-        if "use" in code:
-            return "Rust"
-        if "<?php" in code:
-            return "PHP"
-        if "resource" in code:
-            return "Terraform"
-        return "Unknown"
-
-# Agent 1: Pre-evaluation Analysis
-pre_evaluation_agent = Agent(
-    name="pre_evaluation_agent",
+# Agent 1: Region Tag Extractor
+region_tag_agent = Agent(
+    name="region_tag_agent",
     model=MODEL,
-    instruction="First, extract the region tags from the user's code. Then, detect the programming language. Finally, pass the code, region tags, and language to the next agent.",
-    description="Extracts region tags and detects the programming language of a code snippet.",
-    tools=[RegionTagExtractorTool(), LanguageDetectorTool()]
+    instruction="You have NO tools. Analyze the user's code and extract all unique region tags. A region tag is a string that appears after `[START` or `[END` in a comment. Return a single JSON string array of the region tags. For example: `[\"tag1\", \"tag2\"]`.",
+    description="Extracts region tags from a code snippet.",
 )
 
-# Agent 2: Code Evaluation with Google Search
+# Agent 2: Language Detector
+language_detector_agent = Agent(
+    name="language_detector_agent",
+    model=MODEL,
+    instruction="You have NO tools. Analyze the user's code and detect the programming language. The possible languages are: 'JavaScript', 'Python', 'Java', 'Go', 'Rust', 'Ruby', 'C#', 'C++', 'PHP', 'Terraform'. All variants of JavaScript including TypeScript or Node should be considered 'JavaScript'. Return a single string with the name of the language. For example: `\"Python\"`.",
+    description="Detects the programming language of a code snippet.",
+)
+
+# Agent 3: Code Evaluation with Google Search
 code_eval_agent = Agent(
     name="code_eval_agent",
     model=MODEL,
@@ -104,7 +56,7 @@ class EvaluationResult(BaseModel):
     llm_fix_summary_for_code_generation: List[str] = Field(..., description="A list of all 'recommendations_for_llm_fix' from the breakdowns.")
     identified_generic_problem_categories: List[str] = Field(..., description="A unique list of all 'generic_problem_categories' identified across all criteria.")
 
-# Agent 2: JSON Formatter
+# Agent 4: JSON Formatter
 json_formatter_agent = Agent(
     name="json_formatter_agent",
     model=MODEL,
@@ -116,6 +68,11 @@ json_formatter_agent = Agent(
 # Sequential Agent Workflow
 root_agent = SequentialAgent(
     name="health_scoring_agent",
-    sub_agents=[pre_evaluation_agent, code_eval_agent, json_formatter_agent],
-    description="A sequential agent that first evaluates code and then formats the output."
+    sub_agents=[
+        region_tag_agent,
+        language_detector_agent,
+        code_eval_agent,
+        json_formatter_agent,
+    ],
+    description="A sequential agent that first evaluates code and then formats the output.",
 )
