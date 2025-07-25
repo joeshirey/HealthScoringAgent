@@ -1,4 +1,5 @@
 import json
+import os
 import re
 from typing import AsyncGenerator
 from google.adk.agents import BaseAgent, LlmAgent, ParallelAgent, SequentialAgent
@@ -133,14 +134,18 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         which includes detecting the language, extracting region tags, and
         categorizing the product.
 
+        It is recommended to use the Gemini Flash model for these tasks, as they
+        are relatively simple and do not require the more advanced capabilities
+        of the Gemini Pro model.
+
         Returns:
             A `ParallelAgent` that runs the initial analysis agents in parallel.
         """
         return ParallelAgent(
             name="initial_analysis",
             sub_agents=[
-                LanguageDetectionAgent(name="language_detection_agent", output_key="language_detection_agent_output"),
-                RegionTagExtractionAgent(name="region_tag_extraction_agent", output_key="region_tag_extraction_agent_output"),
+                LanguageDetectionAgent(name="language_detection_agent", output_key="language_detection_agent_output", model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-1.5-flash-latest")),
+                RegionTagExtractionAgent(name="region_tag_extraction_agent", output_key="region_tag_extraction_agent_output", model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-1.5-flash-latest")),
                 ProductCategorizationAgent(name="product_categorization_agent"),
             ],
         )
@@ -153,16 +158,20 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         which includes assessing code quality, API usage, clarity and
         readability, and runnability.
 
+        It is recommended to use the Gemini Flash model for these tasks, as they
+        are relatively simple and do not require the more advanced capabilities
+        of the Gemini Pro model.
+
         Returns:
             A `ParallelAgent` that runs the code analysis agents in parallel.
         """
         return ParallelAgent(
             name="code_analysis",
             sub_agents=[
-                CodeQualityAgent(name="code_quality_agent", output_key="code_quality_agent_output"),
-                ApiAnalysisAgent(name="api_analysis_agent", output_key="api_analysis_agent_output"),
-                ClarityReadabilityAgent(name="clarity_readability_agent", output_key="clarity_readability_agent_output"),
-                RunnabilityAgent(name="runnability_agent", output_key="runnability_agent_output"),
+                CodeQualityAgent(name="code_quality_agent", output_key="code_quality_agent_output", model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-1.5-flash-latest")),
+                ApiAnalysisAgent(name="api_analysis_agent", output_key="api_analysis_agent_output", model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-1.5-flash-latest")),
+                ClarityReadabilityAgent(name="clarity_readability_agent", output_key="clarity_readability_agent_output", model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-1.5-flash-latest")),
+                RunnabilityAgent(name="runnability_agent", output_key="runnability_agent_output", model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-1.5-flash-latest")),
             ],
         )
 
@@ -175,18 +184,24 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         code, and then it runs a JSON formatting agent to format the analysis
         into a clean, structured JSON object.
 
+        It is recommended to use the Gemini Pro model for the initial analysis,
+        as it is a more complex task that requires a deeper understanding of the
+        code. It is recommended to use the Gemini Flash model for the JSON
+        formatting, as it is a relatively simple task that does not require the
+        more advanced capabilities of the Gemini Pro model.
+
         Returns:
             A `SequentialAgent` that runs the evaluation agents in sequence.
         """
         initial_analysis_agent = InitialAnalysisAgent(
             name="initial_analysis_agent",
             output_key="initial_analysis_output",
-            model="gemini-1.5-pro-latest",
+            model=os.environ.get("GEMINI_PRO_MODEL", "gemini-1.5-pro-latest"),
         )
         json_formatting_agent = JsonFormattingAgent(
             name="json_formatting_agent",
             output_key="evaluation_review_agent_output",
-            model="gemini-1.5-pro-latest",
+            model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-1.5-flash-latest"),
         )
         return SequentialAgent(
             name="evaluation_workflow",

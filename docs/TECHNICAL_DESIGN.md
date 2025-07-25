@@ -78,25 +78,25 @@ The `CodeAnalyzerOrchestrator` is a `SequentialAgent` that manages the overall w
 
 The initial analysis agents are run in parallel to improve performance.
 
-*   **`LanguageDetectionAgent`:** An `LlmAgent` that detects the programming language of the code sample.
-*   **`RegionTagExtractionAgent`:** An `LlmAgent` that extracts the region tags from the code sample.
+*   **`LanguageDetectionAgent`:** An `LlmAgent` that detects the programming language of the code sample. It is recommended to use the Gemini Flash model for this task.
+*   **`RegionTagExtractionAgent`:** An `LlmAgent` that extracts the region tags from the code sample. It is recommended to use the Gemini Flash model for this task.
 *   **`ProductCategorizationAgent`:** A `BaseAgent` that categorizes the code sample into a specific Google Cloud product.
 
 ### 3.3. Code Analysis Agents
 
 The code analysis agents are also run in parallel.
 
-*   **`CodeQualityAgent`:** An `LlmAgent` that analyzes the code for quality.
-*   **`ApiAnalysisAgent`:** An `LlmAgent` that analyzes the code for API effectiveness and correctness.
-*   **`ClarityReadabilityAgent`:** An `LlmAgent` that analyzes the code for clarity and readability.
-*   **`RunnabilityAgent`:** An `LlmAgent` that analyzes the code for runnability.
+*   **`CodeQualityAgent`:** An `LlmAgent` that analyzes the code for quality. It is recommended to use the Gemini Flash model for this task.
+*   **`ApiAnalysisAgent`:** An `LlmAgent` that analyzes the code for API effectiveness and correctness. It is recommended to use the Gemini Flash model for this task.
+*   **`ClarityReadabilityAgent`:** An `LlmAgent` that analyzes the code for clarity and readability. It is recommended to use the Gemini Flash model for this task.
+*   **`RunnabilityAgent`:** An `LlmAgent` that analyzes the code for runnability. It is recommended to use the Gemini Flash model for this task.
 
 ### 3.4. Evaluation Agents
 
 The evaluation agents are run sequentially.
 
-*   **`InitialAnalysisAgent`:** An `LlmAgent` that performs the initial, detailed analysis of the code.
-*   **`JsonFormattingAgent`:** An `LlmAgent` that formats the raw text analysis into a JSON object.
+*   **`InitialAnalysisAgent`:** An `LlmAgent` that performs the initial, detailed analysis of the code. It is recommended to use the Gemini Pro model for this task.
+*   **`JsonFormattingAgent`:** An `LlmAgent` that formats the raw text analysis into a JSON object. It is recommended to use the Gemini Flash model for this task.
 
 ### 3.5. Result Processing Agent
 
