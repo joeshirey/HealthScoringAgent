@@ -16,9 +16,30 @@ from agentic_code_analyzer.agents.analysis.initial_analysis_agent import Initial
 from agentic_code_analyzer.agents.analysis.json_formatting_agent import JsonFormattingAgent
 
 class ResultProcessingAgent(BaseAgent):
-    """Agent to process and structure the final output."""
+    """
+    An agent that processes the results of the analysis and formats them into a
+    structured JSON object.
+
+    This agent takes the raw output from the other agents in the system and
+    transforms it into a clean, consistent, and easy-to-understand JSON object.
+    It also handles errors and ensures that the final output is always a valid
+    JSON object.
+    """
     def _safe_json_load(self, json_string: str) -> dict:
-        """Safely loads a JSON string, extracting from markdown if necessary."""
+        """
+        Safely loads a JSON string, extracting from markdown if necessary.
+
+        This function takes a string as input and tries to parse it as JSON. It
+        can handle strings that are wrapped in markdown code blocks, and it will
+        return an empty dictionary if the string is not valid JSON.
+
+        Args:
+            json_string: The string to parse as JSON.
+
+        Returns:
+            A dictionary representing the parsed JSON, or an empty dictionary if
+            the string is not valid JSON.
+        """
         try:
             if '```json' in json_string:
                 match = re.search(r'```json\s*([\s\S]*?)\s*```', json_string)
@@ -29,6 +50,20 @@ class ResultProcessingAgent(BaseAgent):
             return {}
 
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        """
+        Processes the results of the analysis and yields a final event with the
+        structured JSON output.
+
+        This method retrieves the output from the other agents in the system,
+        formats it into a structured JSON object, and then yields a final event
+        with the JSON object as its content.
+
+        Args:
+            ctx: The invocation context for the agent.
+
+        Yields:
+            A final event with the structured JSON output.
+        """
         try:
             evaluation_output = ctx.session.state.get("evaluation_review_agent_output", "{}")
             evaluation_data = self._safe_json_load(evaluation_output)
@@ -58,9 +93,23 @@ class ResultProcessingAgent(BaseAgent):
         )
 
 class CodeAnalyzerOrchestrator(SequentialAgent):
-    """Orchestrates the code analysis workflow using parallel and sequential agents."""
+    """
+    Orchestrates the code analysis workflow using a sequence of parallel and
+    sequential agents.
+
+    This agent is the main entry point for the code analysis workflow. It
+    initializes and runs a sequence of other agents, each of which is
+    responsible for a specific part of the analysis. The workflow is divided
+    into three main phases: initial analysis, code analysis, and evaluation.
+    """
 
     def __init__(self, **kwargs):
+        """
+        Initializes the CodeAnalyzerOrchestrator.
+
+        This method creates the sub-agents that make up the code analysis
+        workflow and then initializes the `SequentialAgent` with the sub-agents.
+        """
         initial_analysis_agent = self._create_initial_analysis_agent()
         code_analysis_agent = self._create_code_analysis_agent()
         evaluation_agent = self._create_evaluation_agent()
@@ -77,7 +126,16 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         )
 
     def _create_initial_analysis_agent(self) -> ParallelAgent:
-        """Creates the parallel agent for the initial analysis phase."""
+        """
+        Creates the parallel agent for the initial analysis phase.
+
+        This agent is responsible for performing the initial analysis of the code,
+        which includes detecting the language, extracting region tags, and
+        categorizing the product.
+
+        Returns:
+            A `ParallelAgent` that runs the initial analysis agents in parallel.
+        """
         return ParallelAgent(
             name="initial_analysis",
             sub_agents=[
@@ -88,7 +146,16 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         )
 
     def _create_code_analysis_agent(self) -> ParallelAgent:
-        """Creates the parallel agent for the code analysis phase."""
+        """
+        Creates the parallel agent for the code analysis phase.
+
+        This agent is responsible for performing the main analysis of the code,
+        which includes assessing code quality, API usage, clarity and
+        readability, and runnability.
+
+        Returns:
+            A `ParallelAgent` that runs the code analysis agents in parallel.
+        """
         return ParallelAgent(
             name="code_analysis",
             sub_agents=[
@@ -100,7 +167,17 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         )
 
     def _create_evaluation_agent(self) -> SequentialAgent:
-        """Creates the sequential agent for the two-step evaluation process."""
+        """
+        Creates the sequential agent for the two-step evaluation process.
+
+        This agent is responsible for performing the final evaluation of the code.
+        It first runs an initial analysis agent to get a detailed analysis of the
+        code, and then it runs a JSON formatting agent to format the analysis
+        into a clean, structured JSON object.
+
+        Returns:
+            A `SequentialAgent` that runs the evaluation agents in sequence.
+        """
         initial_analysis_agent = InitialAnalysisAgent(
             name="initial_analysis_agent",
             output_key="initial_analysis_output",
@@ -117,6 +194,14 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         )
 
     def _create_result_processing_agent(self) -> ResultProcessingAgent:
-        """Creates the result processing agent."""
-        return ResultProcessingAgent(name="result_processor")
+        """
+        Creates the result processing agent.
 
+        This agent is responsible for taking the raw output from the other agents
+        in the system and transforming it into a clean, consistent, and
+        easy-to-understand JSON object.
+
+        Returns:
+            A `ResultProcessingAgent` that processes the final results.
+        """
+        return ResultProcessingAgent(name="result_processor")

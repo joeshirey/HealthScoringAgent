@@ -9,6 +9,7 @@ The HealthScoringAgent is a sophisticated, multi-agent system designed to analyz
 *   **Advanced Product Categorization:** The system uses a sophisticated, rules-based product categorization engine with an LLM fallback. This allows for accurate and reliable categorization of code samples, even in ambiguous cases.
 *   **Detailed System Instructions:** The LLMs are guided by a detailed set of system instructions that define their persona, workflow, and the criteria for their analysis. This ensures that the analysis is consistent, rigorous, and aligned with the project's goals.
 *   **Code Cleaning:** The system includes a utility to remove comments from the code before analysis. This ensures that the analysis is focused on the executable code and is not influenced by comments.
+*   **Web Interface:** The project includes a simple web interface for submitting code samples for analysis. The interface provides a user-friendly way to interact with the system and view the results of the analysis.
 
 ## Getting Started
 
@@ -25,12 +26,53 @@ To get started with the HealthScoringAgent, you will need to have Python 3.12 or
     ```
 3.  **Install the dependencies:**
     ```
-    uv pip install -r agentic_code_analyzer/requirements.txt
+    uv pip install -r requirements.txt
     ```
 4.  **Run the application:**
     ```
-    uv run -m agentic_code_analyzer.main
+    uvicorn api.main:app --host 0.0.0.0 --port 8090
     ```
+
+## API
+
+The HealthScoringAgent provides a simple REST API for analyzing code samples.
+
+### `POST /analyze`
+
+Analyzes a code sample and returns a detailed analysis of its health.
+
+**Request Body:**
+
+*   `code` (string, required): The code sample to analyze.
+*   `github_link` (string, optional): The GitHub link to the code sample.
+
+**Example:**
+
+```
+curl -X POST http://0.0.0.0:8090/analyze \
+-H "Content-Type: application/json" \
+-d '{
+    "code": "def hello_world():\n    print(\"Hello, world!\")"
+}'
+```
+
+### `POST /analyze_github_link`
+
+Analyzes a code sample from a GitHub link and returns a detailed analysis of its health.
+
+**Request Body:**
+
+*   `github_link` (string, required): The GitHub link to the code sample.
+
+**Example:**
+
+```
+curl -X POST http://0.0.0.0:8090/analyze_github_link \
+-H "Content-Type: application/json" \
+-d '{
+    "github_link": "https://github.com/googleapis/google-cloud-node/blob/main/packages/google-cloud-alloydb/samples/quickstart.js"
+}'
+```
 
 ## Project Structure
 
@@ -40,6 +82,8 @@ The project is organized into the following directories:
     *   `agents/`: Contains the individual agents that make up the system.
     *   `prompts/`: Contains the prompt templates that are used to guide the LLMs.
     *   `tools/`: Contains the tools and utilities that are used by the agents.
+*   `api/`: Contains the FastAPI application that provides the web interface and the REST API.
+    *   `ui/`: Contains the HTML, CSS, and JavaScript for the web interface.
 *   `docs/`: Contains the project documentation.
 
 ## Contributing

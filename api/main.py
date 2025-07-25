@@ -1,5 +1,4 @@
 import asyncio
-import asyncio
 import json
 import re
 import httpx
@@ -11,11 +10,26 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 from agentic_code_analyzer.orchestrator import CodeAnalyzerOrchestrator
 
-app = FastAPI()
+app = FastAPI(
+    title="Health Scoring Agent API",
+    description="An API for analyzing and evaluating code samples for quality, correctness, and adherence to best practices.",
+    version="1.0.0",
+)
 
 def remove_comments(code: str, language: str) -> str:
     """
     Removes comments from a code string based on the language.
+
+    This function takes a code string and a language as input, and returns the code
+    string with all comments removed. It supports a wide range of popular
+    programming languages, including Python, JavaScript, Java, C++, and more.
+
+    Args:
+        code: The code string to remove comments from.
+        language: The programming language of the code string.
+
+    Returns:
+        The code string with all comments removed.
     """
     if language.lower() in ["python", "shell", "ruby"]:
         # Removes single-line comments starting with #
@@ -33,14 +47,33 @@ def remove_comments(code: str, language: str) -> str:
         return code
 
 class CodeRequest(BaseModel):
+    """
+    A request to analyze a code sample.
+    """
     code: str
     github_link: str = None
 
 class GitHubLinkRequest(BaseModel):
+    """
+    A request to analyze a code sample from a GitHub link.
+    """
     github_link: str
 
-@app.post("/analyze")
+@app.post("/analyze", summary="Analyze a code sample")
 async def analyze_code(request: CodeRequest):
+    """
+    Analyzes a code sample and returns a detailed analysis of its health.
+
+    This endpoint takes a code sample as input and uses the HealthScoringAgent to
+    perform a comprehensive analysis of its quality, correctness, and adherence to
+    best practices. The analysis is returned as a JSON object.
+
+    Args:
+        request: A `CodeRequest` object containing the code sample to analyze.
+
+    Returns:
+        A JSON object containing the results of the analysis.
+    """
     session_service = InMemorySessionService()
     # This is a temporary solution to determine the language.
     # In a real application, you would use a more robust method.
@@ -76,8 +109,22 @@ async def analyze_code(request: CodeRequest):
 
     return json.loads(final_response)
 
-@app.post("/analyze_github_link")
+@app.post("/analyze_github_link", summary="Analyze a code sample from a GitHub link")
 async def analyze_github_link(request: GitHubLinkRequest):
+    """
+    Analyzes a code sample from a GitHub link and returns a detailed analysis of its health.
+
+    This endpoint takes a GitHub link as input, fetches the code from the link, and
+    then uses the HealthScoringAgent to perform a comprehensive analysis of its
+    quality, correctness, and adherence to best practices. The analysis is returned
+    as a JSON object.
+
+    Args:
+        request: A `GitHubLinkRequest` object containing the GitHub link to the code sample.
+
+    Returns:
+        A JSON object containing the results of the analysis.
+    """
     try:
         raw_url = request.github_link.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
         async with httpx.AsyncClient() as client:
