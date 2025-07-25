@@ -22,6 +22,9 @@ def get_project_intelligence_config_sample(project_id: str):
     Args:
         project_id: The ID of the Google Cloud project.
     """
+    if not project_id or not isinstance(project_id, str):
+        raise ValueError("project_id must be a non-empty string.")
+
     # Create a client
     client = google.cloud.storage_control_v2.StorageControlClient()
 
