@@ -15,6 +15,14 @@ The main components of the system are:
 *   **Tools:** A set of tools and utilities that are used by the agents to perform their tasks.
 *   **Prompts:** A collection of prompt templates that are used to guide the large language models.
 
+```mermaid
+graph TD
+    A[Orchestrator] --> B(Initial Analysis);
+    B --> C(Code Analysis);
+    C --> D(Evaluation);
+    D --> E(Result Processing);
+```
+
 ### 2.1. Workflow
 
 The analysis workflow is as follows:
@@ -33,6 +41,30 @@ The analysis workflow is as follows:
     *   **JSON Formatting:** Formats the analysis into a clean, structured JSON object.
 4.  **Result Processing:**
     *   **Result Processing:** Processes the results of the analysis and generates the final JSON output.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant API
+    participant Orchestrator
+    participant InitialAnalysis
+    participant CodeAnalysis
+    participant Evaluation
+    participant ResultProcessing
+
+    User->>API: POST /analyze_github_link
+    API->>Orchestrator: analyze_code(code, github_link)
+    Orchestrator->>InitialAnalysis: run_async()
+    InitialAnalysis-->>Orchestrator: done()
+    Orchestrator->>CodeAnalysis: run_async()
+    CodeAnalysis-->>Orchestrator: done()
+    Orchestrator->>Evaluation: run_async()
+    Evaluation-->>Orchestrator: done()
+    Orchestrator->>ResultProcessing: run_async()
+    ResultProcessing-->>Orchestrator: done()
+    Orchestrator-->>API: final_response
+    API-->>User: 200 OK
+```
 
 ## 3. Agent Design
 
