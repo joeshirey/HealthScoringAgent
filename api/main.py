@@ -10,6 +10,7 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 from agentic_code_analyzer.orchestrator import CodeAnalyzerOrchestrator
 from dotenv import load_dotenv
+from urllib.parse import urlparse
  
 load_dotenv()
  
@@ -112,6 +113,8 @@ async def analyze_code(request: CodeRequest):
 
     return json.loads(final_response)
 
+ALLOWED_DOMAINS = {"github.com", "raw.githubusercontent.com"}
+ 
 @app.post("/analyze_github_link", summary="Analyze a code sample from a GitHub link")
 async def analyze_github_link(request: GitHubLinkRequest):
     """
@@ -129,6 +132,10 @@ async def analyze_github_link(request: GitHubLinkRequest):
         A JSON object containing the results of the analysis.
     """
     try:
+        parsed_url = urlparse(request.github_link)
+        if parsed_url.hostname not in ALLOWED_DOMAINS:
+            raise HTTPException(status_code=400, detail="Invalid GitHub domain.")
+        
         raw_url = request.github_link.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
         async with httpx.AsyncClient() as client:
             response = await client.get(raw_url)
