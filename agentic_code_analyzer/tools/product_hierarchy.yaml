@@ -1,0 +1,87 @@
+# A list of all products, used for keyword matching and categorization.
+- category: "AI and Machine Learning"
+  products:
+    - product: "Vertex AI Search"
+      keywords: ["vertex-ai-search", "retail-search"]
+    - product: "Vertex AI"
+      keywords: ["vertex-ai", "aiplatform"]
+    - product: "Translation"
+      keywords: ["translation"]
+    - product: "Natural Language"
+      keywords: ["language"]
+    - product: "Vision"
+      keywords: ["vision"]
+    - product: "Speech-to-Text"
+      keywords: ["speech"]
+    - product: "Text-to-Speech"
+      keywords: ["text-to-speech"]
+    - product: "AutoML"
+      keywords: ["automl"]
+- category: "Compute"
+  products:
+    - product: "Compute Engine"
+      keywords: ["compute"]
+    - product: "Cloud Functions"
+      keywords: ["functions"]
+    - product: "Cloud Run"
+      keywords: ["run"]
+- category: "Containers"
+  products:
+    - product: "Google Kubernetes Engine"
+      keywords: ["container"]
+- category: "Databases"
+  products:
+    - product: "Cloud SQL"
+      keywords: ["cloud-sql"]
+    - product: "Spanner"
+      keywords: ["spanner"]
+    - product: "Firestore"
+      keywords: ["firestore"]
+    - product: "Memorystore"
+      keywords: ["memorystore"]
+    - product: "Bigtable"
+      keywords: ["bigtable"]
+- category: "Data Analytics"
+  products:
+    - product: "BigQuery"
+      keywords: ["bigquery"]
+    - product: "BigQuery Migration"
+      keywords: ["bigquerymigration"]
+    - product: "BigQuery Data Transfer"
+      keywords: ["bigquerydatatransfer"]
+    - product: "BigQuery Reservation"
+      keywords: ["bigqueryreservation"]
+    - product: "BigQuery Connection"
+      keywords: ["bigqueryconnection"]
+    - product: "Dataflow"
+      keywords: ["dataflow"]
+    - product: "Dataproc"
+      keywords: ["dataproc"]
+    - product: "Pub/Sub"
+      keywords: ["pubsub"]
+- category: "Developer Tools"
+  products:
+    - product: "Cloud Build"
+      keywords: ["cloudbuild"]
+- category: "Networking"
+  products:
+    - product: "Virtual Private Cloud"
+      keywords: ["vpc"]
+    - product: "Cloud DNS"
+      keywords: ["dns"]
+    - product: "Media CDN"
+      keywords: ["mediacdn"]
+- category: "Security"
+  products:
+    - product: "Secret Manager"
+      keywords: ["secretmanager"]
+- category: "Storage"
+  products:
+    - product: "Cloud Storage"
+      keywords: ["storage"]
+    - product: "Storage Transfer Service"
+      keywords: ["storagetransfer"]
+    - product: "Storage Insights"
+      keywords: ["storageinsights"]
+    - product: "Storage Control"
+      keywords: ["storagecontrol"]

@@ -4,8 +4,6 @@ class CodeQualityAgent(LlmAgent):
     """An agent that analyzes code for quality."""
 
     def __init__(self, **kwargs):
-        super().__init__(
-            model="gemini-1.5-flash",
-            instruction="You are an expert programmer and your task is to analyze the provided code snippet for code quality, including formatting, consistency, and adherence to language best practices. Provide your analysis in a JSON format. The code snippet is: {code_snippet}",
-            **kwargs
-        )
+        super().__init__(model="gemini-1.5-flash", **kwargs)
+        with open("agentic_code_analyzer/prompts/code_quality_prompt.md", "r") as f:
+            self.instruction = f.read()

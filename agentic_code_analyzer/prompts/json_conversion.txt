@@ -1,0 +1,28 @@
+Your task is to convert the following text into a valid JSON object that conforms to the following schema:
+
+{
+  "product_category": "string",
+  "product_name": "string",
+  "overall_compliance_score": "integer",
+  "criteria_breakdown": [
+    {
+      "criterion_name": "string",
+      "score": "integer",
+      "weight": "float",
+      "assessment": "string",
+      "recommendations_for_llm_fix": ["string"],
+      "generic_problem_categories": ["string"]
+    }
+  ],
+  "llm_fix_summary_for_code_generation": ["string"],
+  "identified_generic_problem_categories": ["string"],
+  "citations": [
+    {
+      "citation_number": "integer",
+      "url": "string"
+    }
+  ]
+}
+
+**TEXT TO CONVERT:**
+{{text}}

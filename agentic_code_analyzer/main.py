@@ -21,7 +21,10 @@ async def main():
         app_name="agentic_code_analyzer",
         user_id="test_user",
         session_id="test_session",
-        state={"code_snippet": code_snippet},
+        state={
+            "code_snippet": code_snippet,
+            "github_link": "https://github.com/GoogleCloudPlatform/python-docs-samples/blob/main/storage/control/storage_control_get_project_intelligence_config.py",
+        },
     )
 
     runner = Runner(

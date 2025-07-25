@@ -6,27 +6,22 @@ from google.adk.events import Event
 from google.genai.types import Content, Part
 from agentic_code_analyzer.agents.language_detection_agent import LanguageDetectionAgent
 from agentic_code_analyzer.agents.region_tag_agent import RegionTagExtractionAgent
-from agentic_code_analyzer.agents.product_id_agent import ProductIdentificationAgent
+from agentic_code_analyzer.agents.product_categorization_agent import ProductCategorizationAgent
 from agentic_code_analyzer.agents.analysis.code_quality_agent import CodeQualityAgent
 from agentic_code_analyzer.agents.analysis.api_analysis_agent import ApiAnalysisAgent
 from agentic_code_analyzer.agents.analysis.clarity_readability_agent import ClarityReadabilityAgent
 from agentic_code_analyzer.agents.analysis.runnability_agent import RunnabilityAgent
-from agentic_code_analyzer.evaluation_agent.evaluation_agent import EvaluationReviewAgent
+from agentic_code_analyzer.agents.analysis.initial_analysis_agent import InitialAnalysisAgent
+from agentic_code_analyzer.agents.analysis.json_formatting_agent import JsonFormattingAgent
 
 class ResultProcessingAgent(BaseAgent):
     """Agent to process and structure the final output."""
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         try:
-            product_info = ctx.session.state.get("product_identification_agent_output", "")
-            if isinstance(product_info, str):
-                product_name, product_category = product_info.split(",", 1) if "," in product_info else (product_info, "Unknown")
-            else:
-                product_name, product_category = "Unknown", "Unknown"
-
             analysis_output = {
                 "language": ctx.session.state.get("language_detection_agent_output", "Unknown"),
-                "product_name": product_name.strip(),
-                "product_category": product_category.strip(),
+                "product_name": ctx.session.state.get("product_name", "Unknown"),
+                "product_category": ctx.session.state.get("product_category", "Unknown"),
                 "region_tags": ctx.session.state.get("region_tag_extraction_agent_output", "").split(","),
                 "analysis": {
                     "quality_summary": ctx.session.state.get("code_quality_agent_output", "Not available"),
@@ -88,7 +83,7 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
             sub_agents=[
                 LanguageDetectionAgent(name="language_detection_agent", output_key="language_detection_agent_output"),
                 RegionTagExtractionAgent(name="region_tag_extraction_agent", output_key="region_tag_extraction_agent_output"),
-                ProductIdentificationAgent(name="product_identification_agent", output_key="product_identification_agent_output"),
+                ProductCategorizationAgent(name="product_categorization_agent"),
             ],
         )
 
@@ -104,9 +99,22 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
             ],
         )
 
-    def _create_evaluation_agent(self) -> EvaluationReviewAgent:
-        """Creates the evaluation agent."""
-        return EvaluationReviewAgent(name="evaluation_review_agent", output_key="evaluation_review_agent_output")
+    def _create_evaluation_agent(self) -> SequentialAgent:
+        """Creates the sequential agent for the two-step evaluation process."""
+        initial_analysis_agent = InitialAnalysisAgent(
+            name="initial_analysis_agent",
+            output_key="initial_analysis_output",
+            model="gemini-1.5-pro-latest",
+        )
+        json_formatting_agent = JsonFormattingAgent(
+            name="json_formatting_agent",
+            output_key="evaluation_review_agent_output",
+            model="gemini-1.5-pro-latest",
+        )
+        return SequentialAgent(
+            name="evaluation_workflow",
+            sub_agents=[initial_analysis_agent, json_formatting_agent],
+        )
 
     def _create_result_processing_agent(self) -> ResultProcessingAgent:
         """Creates the result processing agent."""

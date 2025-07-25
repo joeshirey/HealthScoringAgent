@@ -1,0 +1,17 @@
+**LANGUAGE:**
+{{language}}
+
+**URI:**
+{{github_link}}
+
+**Region Tag ID:**
+{{region_tag}}
+
+**CODE_SAMPLE:**
+```{{language}}
+{{code_sample}}
+```
+
+**cleaned_code:**
+```
+{{cleaned_code}}
