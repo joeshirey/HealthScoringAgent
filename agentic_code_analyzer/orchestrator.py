@@ -17,17 +17,21 @@ from agentic_code_analyzer.agents.analysis.json_formatting_agent import JsonForm
 
 class ResultProcessingAgent(BaseAgent):
     """Agent to process and structure the final output."""
+    def _safe_json_load(self, json_string: str) -> dict:
+        """Safely loads a JSON string, extracting from markdown if necessary."""
+        try:
+            if '```json' in json_string:
+                match = re.search(r'```json\s*([\s\S]*?)\s*```', json_string)
+                if match:
+                    json_string = match.group(1)
+            return json.loads(json_string)
+        except (json.JSONDecodeError, AttributeError):
+            return {}
+
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         try:
             evaluation_output = ctx.session.state.get("evaluation_review_agent_output", "{}")
-            if isinstance(evaluation_output, str):
-                if '```json' in evaluation_output:
-                    match = re.search(r'```json\s*([\s\S]*?)\s*```', evaluation_output)
-                    if match:
-                        evaluation_output = match.group(1)
-                evaluation_data = json.loads(evaluation_output)
-            else:
-                evaluation_data = evaluation_output
+            evaluation_data = self._safe_json_load(evaluation_output)
 
             analysis_output = {
                 "language": ctx.session.state.get("language_detection_agent_output", "Unknown"),
@@ -35,17 +39,17 @@ class ResultProcessingAgent(BaseAgent):
                 "product_category": ctx.session.state.get("product_category", "Unknown"),
                 "region_tags": ctx.session.state.get("region_tag_extraction_agent_output", "").split(","),
                 "analysis": {
-                    "quality_summary": json.loads(re.search(r'```json\s*([\s\S]*?)\s*```', ctx.session.state.get("code_quality_agent_output", "{}")).group(1)),
-                    "api_usage_summary": json.loads(re.search(r'```json\s*([\s\S]*?)\s*```', ctx.session.state.get("api_analysis_agent_output", "{}")).group(1)),
-                    "best_practices_summary": json.loads(re.search(r'```json\s*([\s\S]*?)\s*```', ctx.session.state.get("clarity_readability_agent_output", "{}")).group(1)),
-                    "runnability_summary": json.loads(re.search(r'```json\s*([\s\S]*?)\s*```', ctx.session.state.get("runnability_agent_output", "{}")).group(1)),
+                    "quality_summary": self._safe_json_load(ctx.session.state.get("code_quality_agent_output", "{}")),
+                    "api_usage_summary": self._safe_json_load(ctx.session.state.get("api_analysis_agent_output", "{}")),
+                    "best_practices_summary": self._safe_json_load(ctx.session.state.get("clarity_readability_agent_output", "{}")),
+                    "runnability_summary": self._safe_json_load(ctx.session.state.get("runnability_agent_output", "{}")),
                 },
                 "evaluation": evaluation_data,
             }
             
             final_json = json.dumps(analysis_output, indent=2)
-        except (KeyError, TypeError, json.JSONDecodeError) as e:
-            final_json = json.dumps({"error": f"Error in ResultProcessingAgent: {str(e)}"})
+        except Exception as e:
+            final_json = json.dumps({"error": f"An unexpected error occurred in ResultProcessingAgent: {str(e)}"})
         
         yield Event(
             author=self.name,
