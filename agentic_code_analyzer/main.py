@@ -4,7 +4,10 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 from agentic_code_analyzer.orchestrator import CodeAnalyzerOrchestrator
-
+from dotenv import load_dotenv
+ 
+load_dotenv()
+ 
 async def main():
     """Runs the agentic code analyzer."""
     try:

@@ -9,7 +9,10 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 from agentic_code_analyzer.orchestrator import CodeAnalyzerOrchestrator
-
+from dotenv import load_dotenv
+ 
+load_dotenv()
+ 
 app = FastAPI(
     title="Health Scoring Agent API",
     description="An API for analyzing and evaluating code samples for quality, correctness, and adherence to best practices.",
