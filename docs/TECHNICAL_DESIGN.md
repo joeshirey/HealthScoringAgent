@@ -10,10 +10,10 @@ The HealthScoringAgent is built on a modular, multi-agent architecture using the
 
 The main components of the system are:
 
-*   **Orchestrator:** The central component that manages the workflow and coordinates the execution of the other agents.
-*   **Agents:** A collection of specialized agents, each responsible for a specific aspect of the analysis.
-*   **Tools:** A set of tools and utilities that are used by the agents to perform their tasks.
-*   **Prompts:** A collection of prompt templates that are used to guide the large language models.
+* **Orchestrator:** The central component that manages the workflow and coordinates the execution of the other agents.
+* **Agents:** A collection of specialized agents, each responsible for a specific aspect of the analysis.
+* **Tools:** A set of tools and utilities that are used by the agents to perform their tasks.
+* **Prompts:** A collection of prompt templates that are used to guide the large language models.
 
 ```mermaid
 graph TD
@@ -27,23 +27,23 @@ graph TD
 
 The analysis workflow is as follows:
 
-1.  **Initial Analysis (Parallel):**
-    *   **Language Detection:** Detects the programming language of the code sample.
-    *   **Region Tag Extraction:** Extracts the region tags from the code sample.
-    *   **Product Categorization:** Categorizes the code sample into a specific Google Cloud product.
+1. **Initial Analysis (Parallel):**
+    * **Language Detection:** Detects the programming language of the code sample.
+    * **Region Tag Extraction:** Extracts the region tags from the code sample.
+    * **Product Categorization:** Categorizes the code sample into a specific Google Cloud product.
 
-2.  **Code Analysis (Parallel):**
-    *   **Code Quality:** Analyzes the code for quality, including formatting, consistency, and adherence to language best practices.
-    *   **API Analysis:** Analyzes the code for API effectiveness and correctness.
-    *   **Clarity and Readability:** Analyzes the code for clarity, readability, and fitness for LLM training.
-    *   **Runnability:** Analyzes the code for runnability and configuration.
+2. **Code Analysis (Parallel):**
+    * **Code Quality:** Analyzes the code for quality, including formatting, consistency, and adherence to language best practices.
+    * **API Analysis:** Analyzes the code for API effectiveness and correctness.
+    * **Clarity and Readability:** Analyzes the code for clarity, readability, and fitness for LLM training.
+    * **Runnability:** Analyzes the code for runnability and configuration.
 
-3.  **Evaluation (Sequential):**
-    *   **Initial Analysis:** Performs a detailed analysis of the code, using web grounding to ensure the information is accurate and up-to-date.
-    *   **JSON Formatting:** Formats the analysis into a clean, structured JSON object.
+3. **Evaluation (Sequential):**
+    * **Initial Analysis:** Performs a detailed analysis of the code, using web grounding to ensure the information is accurate and up-to-date.
+    * **JSON Formatting:** Formats the analysis into a clean, structured JSON object.
 
-4.  **Result Processing:**
-    *   **Result Processing:** Processes the results of the analysis and generates the final JSON output.
+4. **Result Processing:**
+    * **Result Processing:** Processes the results of the analysis and generates the final JSON output.
 
 ```mermaid
 sequenceDiagram
@@ -81,25 +81,25 @@ The `CodeAnalyzerOrchestrator` is a `SequentialAgent` that manages the overall w
 
 The initial analysis agents are run in parallel to improve performance.
 
-*   **`LanguageDetectionAgent`:** An `LlmAgent` that detects the programming language of the code sample. It is recommended to use the Gemini Flash model for this task.
-*   **`RegionTagExtractionAgent`:** An `LlmAgent` that extracts the region tags from the code sample. It is recommended to use the Gemini Flash model for this task.
-*   **`ProductCategorizationAgent`:** A `BaseAgent` that categorizes the code sample into a specific Google Cloud product.
+* **`LanguageDetectionAgent`:** An `LlmAgent` that detects the programming language of the code sample. It is recommended to use the Gemini Flash model for this task.
+* **`RegionTagExtractionAgent`:** An `LlmAgent` that extracts the region tags from the code sample. It is recommended to use the Gemini Flash model for this task.
+* **`ProductCategorizationAgent`:** A `BaseAgent` that categorizes the code sample into a specific Google Cloud product.
 
 ### 3.3. Code Analysis Agents
 
 The code analysis agents are also run in parallel.
 
-*   **`CodeQualityAgent`:** An `LlmAgent` that analyzes the code for quality. It is recommended to use the Gemini Flash model for this task.
-*   **`ApiAnalysisAgent`:** An `LlmAgent` that analyzes the code for API effectiveness and correctness. It is recommended to use the Gemini Flash model for this task.
-*   **`ClarityReadabilityAgent`:** An `LlmAgent` that analyzes the code for clarity and readability. It is recommended to use the Gemini Flash model for this task.
-*   **`RunnabilityAgent`:** An `LlmAgent` that analyzes the code for runnability. It is recommended to use the Gemini Flash model for this task.
+* **`CodeQualityAgent`:** An `LlmAgent` that analyzes the code for quality. It is recommended to use the Gemini Flash model for this task.
+* **`ApiAnalysisAgent`:** An `LlmAgent` that analyzes the code for API effectiveness and correctness. It is recommended to use the Gemini Flash model for this task.
+* **`ClarityReadabilityAgent`:** An `LlmAgent` that analyzes the code for clarity and readability. It is recommended to use the Gemini Flash model for this task.
+* **`RunnabilityAgent`:** An `LlmAgent` that analyzes the code for runnability. It is recommended to use the Gemini Flash model for this task.
 
 ### 3.4. Evaluation Agents
 
 The evaluation agents are run sequentially.
 
-*   **`InitialAnalysisAgent`:** An `LlmAgent` that performs the initial, detailed analysis of the code. It is recommended to use the Gemini Pro model for this task.
-*   **`JsonFormattingAgent`:** An `LlmAgent` that formats the raw text analysis into a JSON object. It is recommended to use the Gemini Flash model for this task.
+* **`InitialAnalysisAgent`:** An `LlmAgent` that performs the initial, detailed analysis of the code. It is recommended to use the Gemini Pro model for this task.
+* **`JsonFormattingAgent`:** An `LlmAgent` that formats the raw text analysis into a JSON object. It is recommended to use the Gemini Flash model for this task.
 
 ### 3.5. Result Processing Agent
 
@@ -109,11 +109,11 @@ The `ResultProcessingAgent` is a `BaseAgent` that processes the results of the a
 
 The application is configured using environment variables. A `.env` file should be created in the root of the project with the following variables:
 
-*   `GOOGLE_CLOUD_PROJECT`: Your Google Cloud project ID.
-*   `GOOGLE_CLOUD_LOCATION`: The location of your Google Cloud project.
-*   `GOOGLE_GENAI_USE_VERTEXAI`: Whether to use Vertex AI for the generative AI models.
-*   `GEMINI_PRO_MODEL`: The name of the Gemini Pro model to use for the analysis.
-*   `GEMINI_FLASH_MODEL`: The name of the Gemini Flash model to use for the analysis.
+* `GOOGLE_CLOUD_PROJECT`: Your Google Cloud project ID.
+* `GOOGLE_CLOUD_LOCATION`: The location of your Google Cloud project.
+* `GOOGLE_GENAI_USE_VERTEXAI`: Whether to use Vertex AI for the generative AI models.
+* `GEMINI_PRO_MODEL`: The name of the Gemini Pro model to use for the analysis.
+* `GEMINI_FLASH_MODEL`: The name of the Gemini Flash model to use for the analysis.
 
 An example `.env.sample` file is provided in the root of the project.
 
@@ -135,9 +135,9 @@ The system uses a set of Pydantic models to define the structured outputs of the
 
 This is a base model that provides a standardized structure for the output of the individual analysis agents. It includes the following fields:
 
-*   `score`: An integer from 1-10.
-*   `summary`: A brief, high-level summary of the findings.
-*   `details`: A list of specific observations, issues, or recommendations.
+* `score`: An integer from 1-10.
+* `summary`: A brief, high-level summary of the findings.
+* `details`: A list of specific observations, issues, or recommendations.
 
 The `CodeQualityOutput`, `ClarityReadabilityOutput`, and `RunnabilityOutput` models all inherit from this base model.
 

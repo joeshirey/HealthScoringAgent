@@ -8,10 +8,10 @@ The HealthScoringAgent is a multi-agent system designed to automate the analysis
 
 The primary goals of the HealthScoringAgent are to:
 
-*   **Automate code analysis:** Reduce the time and effort required to evaluate code samples.
-*   **Improve code quality:** Provide developers with actionable feedback to improve their code.
-*   **Ensure consistency:** Standardize the criteria and process for evaluating code.
-*   **Provide a comprehensive assessment:** Evaluate code against a wide range of criteria, including quality, correctness, and best practices.
+* **Automate code analysis:** Reduce the time and effort required to evaluate code samples.
+* **Improve code quality:** Provide developers with actionable feedback to improve their code.
+* **Ensure consistency:** Standardize the criteria and process for evaluating code.
+* **Provide a comprehensive assessment:** Evaluate code against a wide range of criteria, including quality, correctness, and best practices.
 
 ## 3. Functional Requirements
 
@@ -19,22 +19,22 @@ The primary goals of the HealthScoringAgent are to:
 
 The system shall be able to analyze code samples written in a variety of languages, including:
 
-*   Python
-*   Java
-*   JavaScript
-*   Go
-*   C#
-*   Ruby
-*   PHP
+* Python
+* Java
+* JavaScript
+* Go
+* C#
+* Ruby
+* PHP
 
 The system shall evaluate code against the following criteria:
 
-*   **Runnability and Configuration:** The code should be runnable by default, with minimal configuration.
-*   **API Effectiveness and Correctness:** The code should use APIs correctly and effectively.
-*   **Comments and Code Clarity:** The code should be well-commented and easy to understand.
-*   **Formatting and Consistency:** The code should be well-formatted and consistent with the canonical style guide for the language.
-*   **Language Best Practices:** The code should follow idiomatic constructs and avoid anti-patterns.
-*   **LLM Training Fitness and Explicitness:** The code should be explicit, self-documenting, and suitable for training large language models.
+* **Runnability and Configuration:** The code should be runnable by default, with minimal configuration.
+* **API Effectiveness and Correctness:** The code should use APIs correctly and effectively.
+* **Comments and Code Clarity:** The code should be well-commented and easy to understand.
+* **Formatting and Consistency:** The code should be well-formatted and consistent with the canonical style guide for the language.
+* **Language Best Practices:** The code should follow idiomatic constructs and avoid anti-patterns.
+* **LLM Training Fitness and Explicitness:** The code should be explicit, self-documenting, and suitable for training large language models.
 
 ### 3.2. Product Categorization
 
@@ -44,10 +44,10 @@ The system shall be able to categorize code samples into a specific Google Cloud
 
 The system shall produce a structured JSON object that contains the results of the analysis. The JSON object shall include the following information:
 
-*   **Overall Compliance Score:** A score from 0 to 100 that represents the overall health of the code.
-*   **Criteria Breakdown:** A detailed breakdown of the score for each evaluation criterion.
-*   **Recommendations:** A list of actionable recommendations for improving the code.
-*   **Citations:** A list of citations that support the analysis.
+* **Overall Compliance Score:** A score from 0 to 100 that represents the overall health of the code.
+* **Criteria Breakdown:** A detailed breakdown of the score for each evaluation criterion.
+* **Recommendations:** A list of actionable recommendations for improving the code.
+* **Citations:** A list of citations that support the analysis.
 
 ## 4. Non-Functional Requirements
 
