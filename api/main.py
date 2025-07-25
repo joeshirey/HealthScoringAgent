@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import re
 import httpx
 from fastapi import FastAPI, HTTPException
@@ -9,6 +10,7 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 from agentic_code_analyzer.orchestrator import CodeAnalyzerOrchestrator
+from agentic_code_analyzer.agents.language_detection_agent import LanguageDetectionAgent
 from dotenv import load_dotenv
 from urllib.parse import urlparse
  
@@ -78,10 +80,32 @@ async def analyze_code(request: CodeRequest):
     Returns:
         A JSON object containing the results of the analysis.
     """
+    lang_session_service = InMemorySessionService()
+    lang_session = await lang_session_service.create_session(
+        app_name="language_detection",
+        user_id="api_user",
+        session_id="lang_session",
+        state={"code_snippet": request.code},
+    )
+    lang_runner = Runner(
+        agent=LanguageDetectionAgent(
+            name="language_detection_agent",
+            model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-1.5-flash"),
+        ),
+        app_name="language_detection",
+        session_service=lang_session_service,
+    )
+    language = "Unknown"
+    async for event in lang_runner.run_async(
+        user_id="api_user",
+        session_id="lang_session",
+        new_message=types.Content(parts=[types.Part(text=request.code)]),
+    ):
+        if event.is_final_response():
+            language = event.content.parts[0].text.strip()
+    if language == "Unknown":
+        raise HTTPException(status_code=400, detail="Could not determine the programming language of the code snippet.")
     session_service = InMemorySessionService()
-    # This is a temporary solution to determine the language.
-    # In a real application, you would use a more robust method.
-    language = "python" # Assuming python for now
     cleaned_code = remove_comments(request.code, language)
     session = await session_service.create_session(
         app_name="agentic_code_analyzer",
@@ -95,7 +119,6 @@ async def analyze_code(request: CodeRequest):
             "LANGUAGE": language,
         },
     )
-
     runner = Runner(
         agent=CodeAnalyzerOrchestrator(name="code_analyzer_orchestrator"),
         app_name="agentic_code_analyzer",

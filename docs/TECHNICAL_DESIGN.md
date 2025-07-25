@@ -27,11 +27,12 @@ graph TD
 
 The analysis workflow is as follows:
 
-1.  **Initial Analysis (Parallel):**
-    *   **Language Detection:** Detects the programming language of the code sample.
+1.  **API Layer:**
+    *   **Language Detection:** The API first detects the programming language of the code sample using the `LanguageDetectionAgent`.
+2.  **Initial Analysis (Parallel):**
     *   **Region Tag Extraction:** Extracts the region tags from the code sample.
     *   **Product Categorization:** Categorizes the code sample into a specific Google Cloud product.
-2.  **Code Analysis (Parallel):**
+3.  **Code Analysis (Parallel):**
     *   **Code Quality:** Analyzes the code for quality, including formatting, consistency, and adherence to language best practices.
     *   **API Analysis:** Analyzes the code for API effectiveness and correctness.
     *   **Clarity and Readability:** Analyzes the code for clarity, readability, and fitness for LLM training.
@@ -46,6 +47,7 @@ The analysis workflow is as follows:
 sequenceDiagram
     participant User
     participant API
+    participant LanguageDetectionAgent
     participant Orchestrator
     participant InitialAnalysis
     participant CodeAnalysis
@@ -53,7 +55,9 @@ sequenceDiagram
     participant ResultProcessing
 
     User->>API: POST /analyze_github_link
-    API->>Orchestrator: analyze_code(code, github_link)
+    API->>LanguageDetectionAgent: run_async()
+    LanguageDetectionAgent-->>API: language
+    API->>Orchestrator: analyze_code(code, github_link, language)
     Orchestrator->>InitialAnalysis: run_async()
     InitialAnalysis-->>Orchestrator: done()
     Orchestrator->>CodeAnalysis: run_async()
@@ -102,7 +106,29 @@ The evaluation agents are run sequentially.
 
 The `ResultProcessingAgent` is a `BaseAgent` that processes the results of the analysis and generates the final JSON output.
 
-## 4. Data Models
+## 4. Configuration
+
+The application is configured using environment variables. A `.env` file should be created in the root of the project with the following variables:
+
+*   `GOOGLE_CLOUD_PROJECT`: Your Google Cloud project ID.
+*   `GOOGLE_CLOUD_LOCATION`: The location of your Google Cloud project.
+*   `GOOGLE_GENAI_USE_VERTEXAI`: Whether to use Vertex AI for the generative AI models.
+*   `GEMINI_PRO_MODEL`: The name of the Gemini Pro model to use for the analysis.
+*   `GEMINI_FLASH_MODEL`: The name of the Gemini Flash model to use for the analysis.
+
+An example `.env.sample` file is provided in the root of the project.
+
+## 5. Running the Application
+
+To run the application in development mode with hot-reloading, use the following command:
+
+```bash
+uv run dev
+```
+
+This will start the FastAPI server on `http://0.0.0.0:8090`.
+
+## 6. Data Models
 
 The system uses a simple data model to represent the results of the analysis. The main data model is the `AnalysisResult`, which is a Pydantic model that contains the following information:
 
