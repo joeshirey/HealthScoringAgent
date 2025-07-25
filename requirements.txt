@@ -1,3 +1,5 @@
 google-adk
 python-dotenv
 pygments
+fastapi
+uvicorn[standard]
