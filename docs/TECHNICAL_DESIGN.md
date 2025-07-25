@@ -27,9 +27,8 @@ graph TD
 
 The analysis workflow is as follows:
 
-1.  **API Layer:**
-    *   **Language Detection:** The API first detects the programming language of the code sample using the `LanguageDetectionAgent`.
-2.  **Initial Analysis (Parallel):**
+1.  **Initial Analysis (Parallel):**
+    *   **Language Detection:** Detects the programming language of the code sample.
     *   **Region Tag Extraction:** Extracts the region tags from the code sample.
     *   **Product Categorization:** Categorizes the code sample into a specific Google Cloud product.
 3.  **Code Analysis (Parallel):**
@@ -47,7 +46,6 @@ The analysis workflow is as follows:
 sequenceDiagram
     participant User
     participant API
-    participant LanguageDetectionAgent
     participant Orchestrator
     participant InitialAnalysis
     participant CodeAnalysis
@@ -55,9 +53,7 @@ sequenceDiagram
     participant ResultProcessing
 
     User->>API: POST /analyze_github_link
-    API->>LanguageDetectionAgent: run_async()
-    LanguageDetectionAgent-->>API: language
-    API->>Orchestrator: analyze_code(code, github_link, language)
+    API->>Orchestrator: analyze_code(code, github_link)
     Orchestrator->>InitialAnalysis: run_async()
     InitialAnalysis-->>Orchestrator: done()
     Orchestrator->>CodeAnalysis: run_async()
@@ -130,9 +126,18 @@ This will start the FastAPI server on `http://0.0.0.0:8090`.
 
 ## 6. Data Models
 
-The system uses a simple data model to represent the results of the analysis. The main data model is the `AnalysisResult`, which is a Pydantic model that contains the following information:
+The system uses a set of Pydantic models to define the structured outputs of the analysis agents. These models are defined in the `agentic_code_analyzer/models.py` file.
 
-*   **`git_info`:** Information about the git repository where the code sample is located.
-*   **`region_tags`:** The region tags that were extracted from the code sample.
-*   **`evaluation_data`:** The results of the evaluation.
-*   **`raw_code`:** The raw code of the code sample.
+### 6.1. `AnalysisOutput`
+
+This is a base model that provides a standardized structure for the output of the individual analysis agents. It includes the following fields:
+
+*   `score`: An integer from 1-10.
+*   `summary`: A brief, high-level summary of the findings.
+*   `details`: A list of specific observations, issues, or recommendations.
+
+The `CodeQualityOutput`, `ClarityReadabilityOutput`, and `RunnabilityOutput` models all inherit from this base model.
+
+### 6.2. `EvaluationOutput`
+
+This model defines the structure of the final output from the evaluation workflow. It includes a detailed breakdown of the analysis, including the overall compliance score, a list of criteria, and a summary of the recommended fixes.

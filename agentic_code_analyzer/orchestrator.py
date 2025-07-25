@@ -1,11 +1,18 @@
 import json
 import os
 import re
+import pydantic
 from typing import AsyncGenerator
 from google.adk.agents import BaseAgent, LlmAgent, ParallelAgent, SequentialAgent
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.events import Event
 from google.genai.types import Content, Part
+from agentic_code_analyzer.models import (
+    ClarityReadabilityOutput,
+    CodeQualityOutput,
+    EvaluationOutput,
+    RunnabilityOutput,
+)
 from agentic_code_analyzer.agents.language_detection_agent import LanguageDetectionAgent
 from agentic_code_analyzer.agents.region_tag_agent import RegionTagExtractionAgent
 from agentic_code_analyzer.agents.product_categorization_agent import ProductCategorizationAgent
@@ -65,9 +72,14 @@ class ResultProcessingAgent(BaseAgent):
         Yields:
             A final event with the structured JSON output.
         """
+        def _to_dict(obj):
+            if isinstance(obj, pydantic.BaseModel):
+                return obj.model_dump()
+            return obj
+
         try:
-            evaluation_output = ctx.session.state.get("evaluation_review_agent_output", "{}")
-            evaluation_data = self._safe_json_load(evaluation_output)
+            evaluation_output = ctx.session.state.get("evaluation_review_agent_output", {})
+            api_usage_summary_output = ctx.session.state.get("api_analysis_agent_output", "{}")
 
             analysis_output = {
                 "language": ctx.session.state.get("language_detection_agent_output", "Unknown"),
@@ -75,12 +87,12 @@ class ResultProcessingAgent(BaseAgent):
                 "product_category": ctx.session.state.get("product_category", "Unknown"),
                 "region_tags": ctx.session.state.get("region_tag_extraction_agent_output", "").split(","),
                 "analysis": {
-                    "quality_summary": self._safe_json_load(ctx.session.state.get("code_quality_agent_output", "{}")),
-                    "api_usage_summary": self._safe_json_load(ctx.session.state.get("api_analysis_agent_output", "{}")),
-                    "best_practices_summary": self._safe_json_load(ctx.session.state.get("clarity_readability_agent_output", "{}")),
-                    "runnability_summary": self._safe_json_load(ctx.session.state.get("runnability_agent_output", "{}")),
+                    "quality_summary": _to_dict(ctx.session.state.get("code_quality_agent_output", {})),
+                    "api_usage_summary": self._safe_json_load(api_usage_summary_output),
+                    "best_practices_summary": _to_dict(ctx.session.state.get("clarity_readability_agent_output", {})),
+                    "runnability_summary": _to_dict(ctx.session.state.get("runnability_agent_output", {})),
                 },
-                "evaluation": evaluation_data,
+                "evaluation": _to_dict(evaluation_output),
             }
             
             final_json = json.dumps(analysis_output, indent=2)
@@ -172,10 +184,10 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         return ParallelAgent(
             name="code_analysis",
             sub_agents=[
-                CodeQualityAgent(name="code_quality_agent", output_key="code_quality_agent_output", model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-2.5-flash")),
+                CodeQualityAgent(name="code_quality_agent", output_key="code_quality_agent_output", output_schema=CodeQualityOutput, disallow_transfer_to_parent=True, disallow_transfer_to_peers=True, model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-2.5-flash")),
                 ApiAnalysisAgent(name="api_analysis_agent", output_key="api_analysis_agent_output", model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-2.5-flash")),
-                ClarityReadabilityAgent(name="clarity_readability_agent", output_key="clarity_readability_agent_output", model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-2.5-flash")),
-                RunnabilityAgent(name="runnability_agent", output_key="runnability_agent_output", model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-2.5-flash")),
+                ClarityReadabilityAgent(name="clarity_readability_agent", output_key="clarity_readability_agent_output", output_schema=ClarityReadabilityOutput, disallow_transfer_to_parent=True, disallow_transfer_to_peers=True, model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-2.5-flash")),
+                RunnabilityAgent(name="runnability_agent", output_key="runnability_agent_output", output_schema=RunnabilityOutput, disallow_transfer_to_parent=True, disallow_transfer_to_peers=True, model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-2.5-flash")),
             ],
         )
 
@@ -205,6 +217,9 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         json_formatting_agent = JsonFormattingAgent(
             name="json_formatting_agent",
             output_key="evaluation_review_agent_output",
+            output_schema=EvaluationOutput,
+            disallow_transfer_to_parent=True,
+            disallow_transfer_to_peers=True,
             model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-2.5-flash"),
         )
         return SequentialAgent(
