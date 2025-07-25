@@ -31,14 +31,17 @@ The analysis workflow is as follows:
     *   **Language Detection:** Detects the programming language of the code sample.
     *   **Region Tag Extraction:** Extracts the region tags from the code sample.
     *   **Product Categorization:** Categorizes the code sample into a specific Google Cloud product.
-3.  **Code Analysis (Parallel):**
+
+2.  **Code Analysis (Parallel):**
     *   **Code Quality:** Analyzes the code for quality, including formatting, consistency, and adherence to language best practices.
     *   **API Analysis:** Analyzes the code for API effectiveness and correctness.
     *   **Clarity and Readability:** Analyzes the code for clarity, readability, and fitness for LLM training.
     *   **Runnability:** Analyzes the code for runnability and configuration.
+
 3.  **Evaluation (Sequential):**
     *   **Initial Analysis:** Performs a detailed analysis of the code, using web grounding to ensure the information is accurate and up-to-date.
     *   **JSON Formatting:** Formats the analysis into a clean, structured JSON object.
+
 4.  **Result Processing:**
     *   **Result Processing:** Processes the results of the analysis and generates the final JSON output.
 

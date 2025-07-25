@@ -16,20 +16,20 @@ The HealthScoringAgent is a sophisticated, multi-agent system designed to analyz
 To get started with the HealthScoringAgent, you will need to have Python 3.12 or higher installed. You will also need to have a Google Cloud project with the Vertex AI API enabled.
 
 1.  **Clone the repository:**
-    ```
+    ```bash
     git clone https://github.com/joeshirey/HealthScoringAgent.git
     ```
 2.  **Create a virtual environment:**
-    ```
+    ```bash
     python3 -m venv .venv
     source .venv/bin/activate
     ```
 3.  **Install the dependencies:**
-    ```
+    ```bash
     uv pip install -r requirements.txt
     ```
 4.  **Run the application:**
-    ```
+    ```bash
     uvicorn api.main:app --host 0.0.0.0 --port 8090
     ```
 
@@ -48,7 +48,7 @@ Analyzes a code sample and returns a detailed analysis of its health.
 
 **Example:**
 
-```
+```bash
 curl -X POST http://0.0.0.0:8090/analyze \
 -H "Content-Type: application/json" \
 -d '{
@@ -66,7 +66,7 @@ Analyzes a code sample from a GitHub link and returns a detailed analysis of its
 
 **Example:**
 
-```
+```bash
 curl -X POST http://0.0.0.0:8090/analyze_github_link \
 -H "Content-Type: application/json" \
 -d '{
