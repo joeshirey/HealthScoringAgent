@@ -9,7 +9,14 @@ dependencies = [
     "pygments",
     "fastapi",
     "uvicorn[standard]",
+    "google-generativeai",
+    "demjson3",
+    "httpx",
 ]
 
 [project.scripts]
-dev = "uvicorn api.main:app --host 0.0.0.0 --port 8090 --reload"
+dev = "run_dev:main"
+
+[tool.setuptools]
+py-modules = ["run_dev"]
+packages = ["agentic_code_analyzer", "api"]
