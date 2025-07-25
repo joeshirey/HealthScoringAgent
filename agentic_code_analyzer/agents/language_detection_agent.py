@@ -18,6 +18,6 @@ class LanguageDetectionAgent(LlmAgent):
         a code snippet.
         """
         super().__init__(
-            instruction="You are an expert programmer and your task is to identify the programming language of the provided code snippet. Your response should only be one of the following supported languages: Javascript, Typescript, Python, Java, Go, Rust, Ruby, C#, C++, PHP. Do not provide any other information in your response. If you cannot determine the language, respond with \"Unknown\". The code snippet is: {code_snippet}",
+            instruction="You are an expert programmer and your task is to identify the programming language of the provided code snippet. Your response should only be one of the following supported languages: Javascript, Python, Java, Go, Rust, Ruby, C#, C++, PHP, or Terraform. Do not provide any other information in your response. If you cannot determine the language, respond with \"Unknown\". The code snippet is: {code_snippet}",
             **kwargs
         )

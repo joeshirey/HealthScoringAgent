@@ -5,7 +5,6 @@ class EvaluationReviewAgent(LlmAgent):
 
     def __init__(self, **kwargs):
         super().__init__(
-            model="gemini-1.5-flash",
             instruction="You are an expert software engineering manager and your task is to review the provided code analysis and provide a score for its accuracy. Provide your review in a JSON format.",
             **kwargs
         )

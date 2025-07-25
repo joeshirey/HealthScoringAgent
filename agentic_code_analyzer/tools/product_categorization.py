@@ -95,7 +95,7 @@ def _categorize_with_llm(code_content: str, product_list: list) -> tuple[str, st
         )
 
         response = client.models.generate_content(
-            model="gemini-1.5-pro-latest",
+            model=os.environ.get("GEMINI_PRO_MODEL", "gemini-2.5-pro"),
             contents=prompt,
             config=generation_config,
         )

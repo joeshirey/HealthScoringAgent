@@ -144,8 +144,8 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         return ParallelAgent(
             name="initial_analysis",
             sub_agents=[
-                LanguageDetectionAgent(name="language_detection_agent", output_key="language_detection_agent_output", model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-1.5-flash-latest")),
-                RegionTagExtractionAgent(name="region_tag_extraction_agent", output_key="region_tag_extraction_agent_output", model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-1.5-flash-latest")),
+                LanguageDetectionAgent(name="language_detection_agent", output_key="language_detection_agent_output", model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-2.5-flash")),
+                RegionTagExtractionAgent(name="region_tag_extraction_agent", output_key="region_tag_extraction_agent_output", model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-2.5-flash")),
                 ProductCategorizationAgent(name="product_categorization_agent"),
             ],
         )
@@ -168,10 +168,10 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         return ParallelAgent(
             name="code_analysis",
             sub_agents=[
-                CodeQualityAgent(name="code_quality_agent", output_key="code_quality_agent_output", model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-1.5-flash-latest")),
-                ApiAnalysisAgent(name="api_analysis_agent", output_key="api_analysis_agent_output", model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-1.5-flash-latest")),
-                ClarityReadabilityAgent(name="clarity_readability_agent", output_key="clarity_readability_agent_output", model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-1.5-flash-latest")),
-                RunnabilityAgent(name="runnability_agent", output_key="runnability_agent_output", model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-1.5-flash-latest")),
+                CodeQualityAgent(name="code_quality_agent", output_key="code_quality_agent_output", model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-2.5-flash")),
+                ApiAnalysisAgent(name="api_analysis_agent", output_key="api_analysis_agent_output", model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-2.5-flash")),
+                ClarityReadabilityAgent(name="clarity_readability_agent", output_key="clarity_readability_agent_output", model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-2.5-flash")),
+                RunnabilityAgent(name="runnability_agent", output_key="runnability_agent_output", model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-2.5-flash")),
             ],
         )
 
@@ -196,12 +196,12 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         initial_analysis_agent = InitialAnalysisAgent(
             name="initial_analysis_agent",
             output_key="initial_analysis_output",
-            model=os.environ.get("GEMINI_PRO_MODEL", "gemini-1.5-pro-latest"),
+            model=os.environ.get("GEMINI_PRO_MODEL", "gemini-2.5-pro"),
         )
         json_formatting_agent = JsonFormattingAgent(
             name="json_formatting_agent",
             output_key="evaluation_review_agent_output",
-            model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-1.5-flash-latest"),
+            model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-2.5-flash"),
         )
         return SequentialAgent(
             name="evaluation_workflow",
