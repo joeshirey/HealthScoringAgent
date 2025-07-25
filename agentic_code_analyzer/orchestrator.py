@@ -84,8 +84,12 @@ class ResultProcessingAgent(BaseAgent):
             }
             
             final_json = json.dumps(analysis_output, indent=2)
+        except json.JSONDecodeError as e:
+            final_json = json.dumps({"error": f"Failed to decode JSON in ResultProcessingAgent: {str(e)}"})
+        except KeyError as e:
+            final_json = json.dumps({"error": f"Missing expected key in session state: {str(e)}"})
         except Exception as e:
-            final_json = json.dumps({"error": f"An unexpected error occurred in ResultProcessingAgent: {str(e)}"})
+            final_json = json.dumps({"error": f"An unexpected error occurred in ResultProcessingAgent: {type(e).__name__} - {str(e)}"})
         
         yield Event(
             author=self.name,
