@@ -25,4 +25,4 @@ Your task is to convert the following text into a valid JSON object that conform
 }
 
 **TEXT TO CONVERT:**
-{{text}}
+{{initial_analysis_output}}

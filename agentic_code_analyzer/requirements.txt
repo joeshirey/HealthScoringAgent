@@ -3,3 +3,4 @@ demjson3
 google-adk
 fastapi
 uvicorn
+httpx

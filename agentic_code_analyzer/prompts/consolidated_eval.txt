@@ -1,15 +1,15 @@
 **LANGUAGE:**
-{{language}}
+{{language_detection_agent_output}}
 
 **URI:**
 {{github_link}}
 
 **Region Tag ID:**
-{{region_tag}}
+{{region_tag_extraction_agent_output}}
 
 **CODE_SAMPLE:**
-```{{language}}
-{{code_sample}}
+```{{language_detection_agent_output}}
+{{code_snippet}}
 ```
 
 **cleaned_code:**

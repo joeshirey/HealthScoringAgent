@@ -1,0 +1,80 @@
+body {
+    font-family: sans-serif;
+    margin: 0;
+    background-color: #f0f2f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container {
+    width: 80%;
+    max-width: 800px;
+    background-color: #fff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.input-group {
+    display: flex;
+    margin-bottom: 2rem;
+}
+
+#github-link {
+    flex-grow: 1;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+#analyze-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    background-color: #007bff;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.results-container {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 1rem;
+    background-color: #f8f9fa;
+}
+
+#results {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.result-section {
+    margin-bottom: 1.5rem;
+}
+
+.result-section h2 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+    color: #333;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 0.5rem;
+}
+
+.sub-section {
+    margin-bottom: 1rem;
+}
+
+.sub-section h3 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    color: #555;
+}
