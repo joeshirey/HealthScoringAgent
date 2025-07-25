@@ -17,6 +17,6 @@ class ClarityReadabilityAgent(LlmAgent):
         prompt that instructs the model to analyze the code for clarity and
         readability.
         """
-        super().__init__(model="gemini-1.5-flash", **kwargs)
+        super().__init__(**kwargs)
         with open("agentic_code_analyzer/prompts/clarity_readability_prompt.md", "r") as f:
             self.instruction = f.read()

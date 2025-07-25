@@ -16,6 +16,6 @@ class CodeQualityAgent(LlmAgent):
         This method initializes the `LlmAgent` with a specific model and a
         prompt that instructs the model to analyze the code for quality.
         """
-        super().__init__(model="gemini-1.5-flash", **kwargs)
+        super().__init__(**kwargs)
         with open("agentic_code_analyzer/prompts/code_quality_prompt.md", "r") as f:
             self.instruction = f.read()

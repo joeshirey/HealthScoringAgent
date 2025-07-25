@@ -18,6 +18,6 @@ class ApiAnalysisAgent(LlmAgent):
         prompt that instructs the model to analyze the code for API
         effectiveness and correctness.
         """
-        super().__init__(model="gemini-1.5-flash", tools=[google_search], **kwargs)
+        super().__init__(tools=[google_search], **kwargs)
         with open("agentic_code_analyzer/prompts/api_analysis_prompt.md", "r") as f:
             self.instruction = f.read()
