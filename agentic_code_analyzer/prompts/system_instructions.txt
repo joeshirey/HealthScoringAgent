@@ -180,7 +180,6 @@ You MUST evaluate the provided code for the specified **{{LANGUAGE}}** against t
     *   Your assessment for this criterion MUST include an `api_call_analysis` JSON array.
     *   **For EACH method** identified in your `API Call Inventory`, you MUST create a corresponding object in the `api_call_analysis` array and evaluate it. If you do not analyze every method, the evaluation is a failure.
     *   The `response_handling_check` must verify correct handling of the API response structure and data types.
-    *   The sample should implement rudimentary error handling for API calls (try/catch, err != nil, etc.). Note any deficiencies in the overall assessment for this criterion.
     *   **Single Source of Truth Mandate:** Your entire API assessment MUST be based on the following official sources. You are REQUIRED to use your search tool to consult them for the specified `{{LANGUAGE}}`.
           * **Priority 1: Official Language-Specific Reference Documentation:** (C#, C++, Go, Java, Javascript/Node.js, PHP, Python, Ruby, Rust)
           * **Priority 2: Official SDK Source Code Repositories:** (C#/.NET, C++, Go, Java, Javascript/Node.js, PHP, Python, Ruby, Rust, Terraform)
@@ -206,6 +205,10 @@ You MUST evaluate the provided code for the specified **{{LANGUAGE}}** against t
         "response_handling_check": {
           "status": "string ('Pass' or 'Fail')",
           "reasoning": "string (If 'Fail', explain how the response handling is incorrect and provide a citation if possible.)"
+        },
+        "error_handling_check": {
+          "status": "string ('Pass' or 'Fail')",
+          "reasoning": "string (If 'Fail', state that the API call is not wrapped in an appropriate error handling block, e.g., try/except.)"
         }
       }
     }
@@ -214,7 +217,7 @@ You MUST evaluate the provided code for the specified **{{LANGUAGE}}** against t
 3.  **Comments & Code Clarity (criterion_name: `comments_and_code_clarity`, Weight: 0.10)**
 
       * **Note: This criterion MUST be evaluated using the `CODE_SAMPLE` variable to analyze comments.**
-      * Are comments helpful and explanatory, clarifying the "why" behind non-obvious code?
+      * Are comments helpful and explanatory, clarifying the "why" behind any complex algorithms, business logic, or non-obvious implementation choices?
       * Is the code itself clear, readable, and easy to understand?
       * **Instructional Value:** Does the sample effectively teach a developer with a basic understanding of `{{LANGUAGE}}` how to perform a specific action with the API?
 
@@ -233,7 +236,7 @@ You MUST evaluate the provided code for the specified **{{LANGUAGE}}** against t
 
 6.  **LLM Training Fitness & Explicitness (criterion_name: `llm_training_fitness_and_explicitness`, Weight: 0.10)**
 
-      * Is the code in `cleaned_code` explicit and self-documenting? It MUST avoid "magic values" (unexplained literals) and favor descriptive variable names.
+      * Is the code in `cleaned_code` explicit and self-documenting? It MUST avoid "magic values" (e.g., unexplained strings, numbers, or booleans used in a way that is not immediately obvious from the context) and favor descriptive variable names.
       * Does the sample use type hints or explicit type declarations where idiomatic for the language?
       * Is the demonstrated pattern clear and unambiguous, providing a strong, positive example for an LLM to learn from?
 
