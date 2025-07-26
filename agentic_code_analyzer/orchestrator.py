@@ -43,7 +43,10 @@ class ResultProcessingAgent(BaseAgent):
         except json.JSONDecodeError:
             # Fallback to demjson3 for more lenient parsing
             try:
-                return demjson3.decode(json_string)
+                decoded = demjson3.decode(json_string)
+                if isinstance(decoded, dict):
+                    return decoded
+                return {}
             except demjson3.JSONDecodeError:
                 return {}
         except AttributeError:

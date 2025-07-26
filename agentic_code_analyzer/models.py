@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, conint
+from pydantic import BaseModel, Field
 from typing import List, Literal, Union
 
 # Defining specific literals for criterion names to enforce consistency
@@ -57,7 +57,7 @@ class ApiCallAnalysis(BaseModel):
 class CriteriaBreakdown(BaseModel):
     """Pydantic model for the criteria breakdown in the final evaluation."""
     criterion_name: CriterionName = Field(..., description="The name of the criterion being assessed.")
-    score: conint(ge=0, le=100) = Field(..., description="The score for this criterion, from 0 to 100.")
+    score: int = Field(..., ge=0, le=100, description="The score for this criterion, from 0 to 100.")
     weight: float = Field(..., description="The weight of this criterion in the overall score.")
     assessment: Union[str, RunnabilityChecks, List[ApiCallAnalysis]] = Field(..., description="The detailed assessment, which can be a string or a structured object for specific criteria.")
     recommendations_for_llm_fix: List[str] = Field(default=[], description="Actionable recommendations for an LLM to fix issues.")
@@ -70,8 +70,8 @@ class Citation(BaseModel):
 
 class EvaluationOutput(BaseModel):
     """Pydantic model for the final output of the evaluation workflow."""
-    overall_compliance_score: conint(ge=0, le=100) = Field(..., description="The overall compliance score for the code sample.")
-    criteria_breakdown: List[CriteriaBreakdown] = Field(..., min_items=1, description="A breakdown of the score by criterion.")
+    overall_compliance_score: int = Field(..., ge=0, le=100, description="The overall compliance score for the code sample.")
+    criteria_breakdown: List[CriteriaBreakdown] = Field(..., min_length=1, description="A breakdown of the score by criterion.")
     llm_fix_summary_for_code_generation: List[str] = Field(default=[], description="A summary of the fixes an LLM could make.")
     identified_generic_problem_categories: List[str] = Field(default=[], description="The unique generic categories of the identified problems.")
     citations: List[Citation] = Field(default=[], description="A list of citations for the analysis.")

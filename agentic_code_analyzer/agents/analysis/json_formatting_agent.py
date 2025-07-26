@@ -17,7 +17,7 @@ class JsonFormattingAgent(LlmAgent):
         prompt that instructs the model to format the raw text analysis into a
         JSON object.
         """
-        with open("agentic_code_analyzer/prompts/json_conversion.txt", "r") as f:
+        with open("agentic_code_analyzer/prompts/json_conversion.md", "r") as f:
             prompt_template = f.read()
         super().__init__(
             instruction=prompt_template,

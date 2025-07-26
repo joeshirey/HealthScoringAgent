@@ -17,7 +17,9 @@ class LanguageDetectionAgent(LlmAgent):
         prompt that instructs the model to identify the programming language of
         a code snippet.
         """
+        with open("agentic_code_analyzer/prompts/language_detection.md", "r") as f:
+            instruction = f.read()
         super().__init__(
-            instruction="You are an expert programmer and your task is to identify the programming language of the provided code snippet. Your response should only be one of the following supported languages: Javascript, Python, Java, Go, Rust, Ruby, C#, C++, PHP, or Terraform. Do not provide any other information in your response. If you cannot determine the language, respond with \"Unknown\". The code snippet is: {code_snippet}",
+            instruction=instruction,
             **kwargs
         )

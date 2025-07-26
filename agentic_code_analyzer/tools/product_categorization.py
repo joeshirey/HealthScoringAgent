@@ -22,7 +22,7 @@ def _load_product_config():
         ('Storage', 'Storage Control'),
         ('AI and Machine Learning', 'Vertex AI Search'),
     ]
-    
+
     current_dir = os.path.dirname(os.path.abspath(__file__))
     yaml_path = os.path.join(current_dir, 'product_hierarchy.yaml')
 
@@ -41,12 +41,12 @@ def _load_product_config():
     for product in all_products_from_yaml:
         if product not in ordered_products:
             ordered_products.append(product)
-            
+
     return hierarchy, ordered_products
 
 PRODUCT_HIERARCHY, ORDERED_PRODUCTS = _load_product_config()
 
-def _find_product_by_rules(search_string: str) -> Optional[tuple[str, str]]:
+def _find_product_by_rules(search_string: Optional[str]) -> Optional[tuple[str, str]]:
     """
     Finds a product by matching keywords against a search string.
     """
@@ -72,7 +72,7 @@ def _categorize_with_llm(code_content: str, product_list: list) -> tuple[str, st
     try:
         client = genai.Client()
         formatted_product_list = "\n".join([f"- Category: {cat}, Product: {prod}" for cat, prod in product_list])
-        
+
         prompt = f"""
         You are an expert Google Cloud developer. Your task is to categorize a code sample into a specific Google Cloud product.
         Analyze the following code, paying close attention to import statements, client library initializations, and API calls.
@@ -99,8 +99,8 @@ def _categorize_with_llm(code_content: str, product_list: list) -> tuple[str, st
             contents=prompt,
             config=generation_config,
         )
-        
-        text_to_load = response.text.strip()
+
+        text_to_load = response.text.strip() if response.text else ""
         match = re.search(r'```json\s*({.*?})\s*```', text_to_load, re.DOTALL)
         if match:
             text_to_load = match.group(1)
@@ -108,14 +108,14 @@ def _categorize_with_llm(code_content: str, product_list: list) -> tuple[str, st
         result = json.loads(text_to_load)
         category = result.get("category", "Uncategorized")
         product = result.get("product", "Uncategorized")
-        
+
         return category, product
 
-    except (json.JSONDecodeError, AttributeError, Exception) as e:
+    except (json.JSONDecodeError, AttributeError, Exception):
         return "Uncategorized", "Uncategorized"
 
 def categorize_sample(
-    code_content: str = "", github_link: str = None, region_tag: str = None, llm_fallback: bool = False
+    code_content: str = "", github_link: Optional[str] = None, region_tag: Optional[str] = None, llm_fallback: bool = False
 ) -> tuple[str, str, bool]:
     """
     Categorizes a code sample using a two-stage process.

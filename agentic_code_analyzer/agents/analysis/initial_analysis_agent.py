@@ -1,6 +1,5 @@
 from google.adk.agents import LlmAgent
 from google.adk.tools import google_search
-from agentic_code_analyzer.tools.code_cleaning import remove_comments
 
 class InitialAnalysisAgent(LlmAgent):
     """
@@ -20,9 +19,9 @@ class InitialAnalysisAgent(LlmAgent):
         prompt that instructs the model to perform a detailed analysis of the
         code.
         """
-        with open("agentic_code_analyzer/prompts/system_instructions.txt", "r") as f:
+        with open("agentic_code_analyzer/prompts/system_instructions.md", "r") as f:
             system_instructions = f.read()
-        with open("agentic_code_analyzer/prompts/consolidated_eval.txt", "r") as f:
+        with open("agentic_code_analyzer/prompts/consolidated_eval.md", "r") as f:
             prompt_template = f.read()
         instruction = f"{system_instructions}\n\n{prompt_template}"
         super().__init__(

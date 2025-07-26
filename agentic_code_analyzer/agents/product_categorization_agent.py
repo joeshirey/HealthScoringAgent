@@ -32,8 +32,8 @@ class ProductCategorizationAgent(BaseAgent):
             An empty generator, as this agent does not produce any events.
         """
         code_snippet = ctx.session.state.get("code_snippet", "")
-        github_link = ctx.session.state.get("github_link")
-        region_tag = ctx.session.state.get("region_tag_extraction_agent_output")
+        github_link = ctx.session.state.get("github_link", "")
+        region_tag = ctx.session.state.get("region_tag_extraction_agent_output", "")
 
         category, product, llm_used = categorize_sample(
             code_content=code_snippet,
