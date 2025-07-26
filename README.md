@@ -4,12 +4,19 @@ The Health Scoring Agent is a sophisticated, multi-agent system designed to anal
 
 ## 📖 Table of Contents
 
-- [Key Features](#-key-features)
-- [System Architecture](#-system-architecture)
-- [Getting Started](#-getting-started)
-- [API Reference](#-api-reference)
-- [Project Structure](#-project-structure)
-- [Contributing](#-contributing)
+- [Health Scoring Agent](#health-scoring-agent)
+  - [📖 Table of Contents](#-table-of-contents)
+  - [✨ Key Features](#-key-features)
+  - [🏗️ System Architecture](#️-system-architecture)
+    - [Orchestrator](#orchestrator)
+    - [Agents](#agents)
+    - [Tools](#tools)
+  - [🚀 Getting Started](#-getting-started)
+  - [↔️ API Reference](#️-api-reference)
+    - [`POST /analyze`](#post-analyze)
+    - [`POST /analyze_github_link`](#post-analyze_github_link)
+  - [📁 Project Structure](#-project-structure)
+  - [🤝 Contributing](#-contributing)
 
 ## ✨ Key Features
 
@@ -77,8 +84,8 @@ To get started with the Health Scoring Agent, you will need to have Python 3.12 
 
     ```
     GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
-    GEMINI_PRO_MODEL="gemini-1.5-pro-latest"
-    GEMINI_FLASH_LITE_MODEL="gemini-1.5-flash-latest"
+    GEMINI_PRO_MODEL="gemini-2.5-pro"
+    GEMINI_FLASH_LITE_MODEL="gemini-2.5-flash-lite"
     ```
 
 5.  **Run the application:**

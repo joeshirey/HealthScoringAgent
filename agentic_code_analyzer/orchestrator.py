@@ -178,8 +178,8 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         return ParallelAgent(
             name="initial_analysis",
             sub_agents=[
-                LanguageDetectionAgent(name="language_detection_agent", output_key="language_detection_agent_output", model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-1.5-flash-latest")),
-                RegionTagExtractionAgent(name="region_tag_extraction_agent", output_key="region_tag_extraction_agent_output", model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-1.5-flash-latest")),
+                LanguageDetectionAgent(name="language_detection_agent", output_key="language_detection_agent_output", model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-2.5-flash-lite")),
+                RegionTagExtractionAgent(name="region_tag_extraction_agent", output_key="region_tag_extraction_agent_output", model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-2.5-flash-lite")),
                 ProductCategorizationAgent(name="product_categorization_agent"),
             ],
         )
@@ -193,7 +193,7 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         initial_analysis_agent = InitialAnalysisAgent(
             name="initial_analysis_agent",
             output_key="initial_analysis_output",
-            model=os.environ.get("GEMINI_PRO_MODEL", "gemini-1.5-pro-latest"),
+            model=os.environ.get("GEMINI_PRO_MODEL", "gemini-2.5-pro"),
         )
 
         json_formatting_agent = JsonFormattingAgent(
@@ -202,7 +202,7 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
             output_schema=EvaluationOutput,  # This now refers to the new detailed schema
             disallow_transfer_to_parent=True,
             disallow_transfer_to_peers=True,
-            model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-1.5-flash-latest"),
+            model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-2.5-flash-lite"),
         )
         return SequentialAgent(
             name="evaluation_workflow",
