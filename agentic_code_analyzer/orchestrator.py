@@ -11,7 +11,7 @@ from google.genai.types import Content, Part
 
 from agentic_code_analyzer.models import EvaluationOutput
 from agentic_code_analyzer.agents.language_detection_agent import LanguageDetectionAgent
-from agentic_code_analyzer.agents.region_tag_agent import RegionTagExtractionAgent
+from agentic_code_analyzer.agents.deterministic_region_tag_agent import DeterministicRegionTagAgent
 from agentic_code_analyzer.agents.product_categorization_agent import ProductCategorizationAgent
 from agentic_code_analyzer.agents.analysis.initial_analysis_agent import InitialAnalysisAgent
 from agentic_code_analyzer.agents.analysis.json_formatting_agent import JsonFormattingAgent
@@ -158,29 +158,30 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         """
         Initializes the CodeAnalyzerOrchestrator.
         """
-        initial_analysis_agent = self._create_initial_analysis_agent()
+        initial_detection_agent = self._create_initial_detection_agent()
+        product_categorization_agent = ProductCategorizationAgent(name="product_categorization_agent")
         evaluation_agent = self._create_evaluation_agent()
         result_processor = self._create_result_processing_agent()
 
         super().__init__(
             name=kwargs.get("name", "code_analyzer_orchestrator"),
             sub_agents=[
-                initial_analysis_agent,
+                initial_detection_agent,
+                product_categorization_agent,
                 evaluation_agent,
                 result_processor,
             ],
         )
 
-    def _create_initial_analysis_agent(self) -> ParallelAgent:
+    def _create_initial_detection_agent(self) -> ParallelAgent:
         """
-        Creates the parallel agent for the initial analysis phase.
+        Creates the parallel agent for the initial detection phase.
         """
         return ParallelAgent(
-            name="initial_analysis",
+            name="initial_detection",
             sub_agents=[
                 LanguageDetectionAgent(name="language_detection_agent", output_key="language_detection_agent_output", model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-2.5-flash-lite")),
-                RegionTagExtractionAgent(name="region_tag_extraction_agent", output_key="region_tag_extraction_agent_output", model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-2.5-flash-lite")),
-                ProductCategorizationAgent(name="product_categorization_agent"),
+                DeterministicRegionTagAgent(name="region_tag_extraction_agent"),
             ],
         )
 
