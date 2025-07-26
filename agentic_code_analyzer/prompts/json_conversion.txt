@@ -1,15 +1,13 @@
 Your task is to convert the following text into a valid JSON object that conforms to the following schema:
 
 {
-  "product_category": "string",
-  "product_name": "string",
-  "overall_compliance_score": "integer",
+  "overall_compliance_score": "integer (0-100)",
   "criteria_breakdown": [
     {
-      "criterion_name": "string",
-      "score": "integer",
+      "criterion_name": "'runnability_and_configuration' | 'api_effectiveness_and_correctness' | 'comments_and_code_clarity' | 'formatting_and_consistency' | 'language_best_practices' | 'llm_training_fitness_and_explicitness'",
+      "score": "integer (0-100)",
       "weight": "float",
-      "assessment": "string",
+      "assessment": "Union[str, RunnabilityChecks, List[ApiCallAnalysis]]",
       "recommendations_for_llm_fix": ["string"],
       "generic_problem_categories": ["string"]
     }

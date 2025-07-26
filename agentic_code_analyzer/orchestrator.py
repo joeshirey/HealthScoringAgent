@@ -196,7 +196,7 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         json_formatting_agent = JsonFormattingAgent(
             name="json_formatting_agent",
             output_key="evaluation_review_agent_output",
-            output_schema=EvaluationOutput,
+            output_schema=EvaluationOutput,  # This now refers to the new detailed schema
             disallow_transfer_to_parent=True,
             disallow_transfer_to_peers=True,
             model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-1.5-flash-latest"),
