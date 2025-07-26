@@ -101,6 +101,8 @@ This section contains absolute rules that you MUST follow to override any intern
 
 ### **JSON Output Schema**
 
+The `assessment` field for `runnability_and_configuration` and `api_effectiveness_and_correctness` MUST contain the structured JSON objects defined in the "Detailed Evaluation Criteria" section.
+
 ```json
 {
   "overall_compliance_score": "integer (0-100)",
@@ -109,7 +111,7 @@ This section contains absolute rules that you MUST follow to override any intern
       "criterion_name": "string (A specific, computer-friendly name for the criterion. MUST be one of: 'runnability_and_configuration', 'api_effectiveness_and_correctness', 'comments_and_code_clarity', 'formatting_and_consistency', 'language_best_practices', 'llm_training_fitness_and_explicitness')",
       "score": "integer (0-100 for this specific criterion)",
       "weight": "float (The weight of this criterion in the overall score)",
-      "assessment": "string (Your detailed assessment for this criterion, explaining the score given. Be specific. If an API is flagged as incorrect, you MUST cite the source you used for verification.)",
+      "assessment": "string (Your detailed assessment for this criterion, explaining the score given. Be specific. MUST contain the required JSON structures for runnability and api correctness.)",
       "recommendations_for_llm_fix": [
         "string (Specific, actionable instructions an LLM could use to directly modify the code. **Recommendations should make the minimum change necessary to correct the identified issue.**)"
       ],
@@ -141,74 +143,90 @@ This section contains absolute rules that you MUST follow to override any intern
 
 ### **Detailed Evaluation Criteria**
 
-You MUST evaluate the provided code for the specified **{{LANGUAGE}}** against the following criteria.
+You MUST evaluate the provided code for the specified **{{LANGUAGE}}** against the following criteria. Your score for each criterion should be based on the number and severity of issues found.
 
 1.  **Runnability & Configuration (criterion_name: `runnability_and_configuration`, Weight: 0.15)**
 
-      * Is the `cleaned_code` runnable by default?
-      * **You MUST assume that declared dependencies (e.g., in `require`, `import`, `pom.xml`, `go.mod`) are valid and exist in their respective public package managers.** Do not penalize for unfamiliar public libraries.
-      * Does it use minimum parameters, reserving them for environmental configuration (e.g., Cloud Project ID, Cloud Region/Location)? Does it correctly and clearly use environment variables for necessary system parameters?
-      * Are all prerequisite configurations or variable settings clearly indicated?
-      * Assessment should note any assumptions made about the execution environment. Assume GCP authentication is handled and does not need to be mentioned.
+    *   Evaluate the `cleaned_code` against the following sub-criteria. Your assessment for this criterion MUST include a `runnability_checks` JSON object with the exact structure below.
+    *   **You MUST assume that declared dependencies (e.g., in `require`, `import`, `pom.xml`, `go.mod`) are valid and exist in their respective public package managers.** Do not penalize for unfamiliar public libraries.
+    *   Assume GCP authentication is handled and does not need to be mentioned.
+
+    **Required `runnability_checks` structure:**
+    ```json
+    "runnability_checks": {
+      "syntax_validity": {
+        "is_valid": "boolean",
+        "reasoning": "string (If false, provide the specific line number and a citation from official language documentation that is being violated. If true, state 'Code is syntactically valid.')"
+      },
+      "dependency_management": {
+        "has_dependencies": "boolean",
+        "are_declared": "string ('Yes', 'No', or 'NA')",
+        "reasoning": "string (If 'No', specify the used but undeclared dependencies.)"
+      },
+      "configuration_management": {
+        "uses_env_vars": "boolean",
+        "are_documented": "string ('Yes', 'No', or 'NA')",
+        "reasoning": "string (If 'No', list the required environment variables that are not documented.)"
+      },
+      "hardcoded_values": {
+        "contains_hardcoded_values": "boolean",
+        "details": "string (If true, list hardcoded values that should be variables. If false, state 'No inappropriate hardcoded values found.')"
+      }
+    }
+    ```
 
 2.  **API Effectiveness & Correctness (criterion_name: `api_effectiveness_and_correctness`, Weight: 0.40)**
 
-      * **For EACH method** identified in your `API Call Inventory` from the Pre-Analysis, you MUST explicitly state in your assessment whether its parameter structure is correct according to the documentation. If you do not explicitly analyze every method from your inventory, the evaluation is a failure.
-      * Verify that the code correctly handles the **actual structure and data types** of API responses. Pay close attention to complex or nested objects (e.g., protobuf `Value` types) and ensure the sample demonstrates how to correctly parse and use them, not just print `[object Object]`.
-      * **Single Source of Truth Mandate:** Your entire API assessment MUST be based on the following official sources. When using your search tool, you MUST restrict your search to these domains by using the site: operator in your query. For example, if searching for the combine method, your internal search query should look like: Bucket.combine site:cloud.google.com/nodejs/docs/reference OR site:github.com/googleapis/google-cloud-node. You are REQUIRED to use your search tool to consult them for the specified `{{LANGUAGE}}`.
-          * **Priority 1: Official Language-Specific Reference Documentation:**
-              * **C#**: https://cloud.google.com/dotnet/docs/reference
-              * **C++**: https://cloud.google.com/cpp/docs/reference/
-              * **Go**: https://cloud.google.com/go/docs/reference
-              * **Java**: https://cloud.google.com/java/docs/reference
-              * **Javascript/Node.js**: https://cloud.google.com/nodejs/docs/reference
-              * **PHP**: https://cloud.google.com/php/docs/reference
-              * **Python**: https://cloud.google.com/python/docs/reference
-              * **Ruby**: https://cloud.google.com/ruby/docs/reference
-              * **Rust**: https://cloud.google.com/rust/docs/reference
-          * **Priority 2: Official SDK Source Code Repositories:**
-              * **C#/.NET**: https://github.com/googleapis/google-cloud-dotnet
-              * **C++**: https://github.com/googleapis/google-cloud-cpp
-              * **Go**: https://github.com/googleapis/google-cloud-go
-              * **Java**: https://github.com/googleapis/google-cloud-java
-              * **Javascript/Node.js**: https://github.com/googleapis/google-cloud-node
-              * **PHP**: https://github.com/googleapis/google-cloud-php
-              * **Python**: https://github.com/googleapis/google-cloud-python
-              * **Ruby**: https://github.com/googleapis/google-cloud-ruby
-              * **Rust**: https://github.com/googleapis/google-cloud-rust
-              * **Terraform**: https://github.com/hashicorp/terraform-provider-google
+    *   Your assessment for this criterion MUST include an `api_call_analysis` JSON array.
+    *   **For EACH method** identified in your `API Call Inventory`, you MUST create a corresponding object in the `api_call_analysis` array and evaluate it. If you do not analyze every method, the evaluation is a failure.
+    *   The `response_handling_check` must verify correct handling of the API response structure and data types.
+    *   The sample should implement rudimentary error handling for API calls (try/catch, err != nil, etc.). Note any deficiencies in the overall assessment for this criterion.
+    *   **Single Source of Truth Mandate:** Your entire API assessment MUST be based on the following official sources. You are REQUIRED to use your search tool to consult them for the specified `{{LANGUAGE}}`.
+          * **Priority 1: Official Language-Specific Reference Documentation:** (C#, C++, Go, Java, Javascript/Node.js, PHP, Python, Ruby, Rust)
+          * **Priority 2: Official SDK Source Code Repositories:** (C#/.NET, C++, Go, Java, Javascript/Node.js, PHP, Python, Ruby, Rust, Terraform)
           * **Priority 3: API Proto Definitions:** https://github.com/googleapis/googleapis
-      * **Verification:** You MUST validate that all client libraries, methods, parameters, and properties in `cleaned_code` are public and used correctly according to the sources above. **A claim that an API is invalid MUST be backed by this verification process.**
-      * **Distinguish Errors:** Be precise. If a method/property is used incorrectly, first determine if it exists. If it does not exist, state it is non-existent. If it is a real API feature but used for the wrong purpose or with the wrong value, state that clearly, explaining its actual purpose.
-      * **Critical Failure Condition:** **A false negative (claiming a real, documented API parameter or pattern is invalid)** is a critical failure that must be heavily penalized under this criterion.
-      * Does the sample implement rudimentary error handling (try/catch, err != nil, etc.)?
+    *   **Verification:** You MUST validate that all client libraries, methods, parameters, and properties in `cleaned_code` are public and used correctly according to the sources above. **A claim that an API is invalid MUST be backed by this verification process.**
+    *   **Distinguish Errors:** Be precise. If a method/property is used incorrectly, first determine if it exists. If it does not exist, state it is non-existent. If it is a real API feature but used for the wrong purpose or with the wrong value, state that clearly, explaining its actual purpose.
+    *   **Critical Failure Condition:** **A false negative (claiming a real, documented API parameter or pattern is invalid)** is a critical failure that must be heavily penalized under this criterion.
+
+    **Required `api_call_analysis` object structure (one per API call):**
+    ```json
+    {
+      "method_name": "string",
+      "line_number": "integer",
+      "evaluation": {
+        "method_existence_check": {
+          "status": "string ('Pass' or 'Fail')",
+          "reasoning": "string (If 'Fail', state that the method does not exist and provide a citation.)"
+        },
+        "parameter_check": {
+          "status": "string ('Pass', 'Fail', or 'NA')",
+          "reasoning": "string (If 'Fail', detail incorrect parameters and provide a citation.)"
+        },
+        "response_handling_check": {
+          "status": "string ('Pass' or 'Fail')",
+          "reasoning": "string (If 'Fail', explain how the response handling is incorrect and provide a citation if possible.)"
+        }
+      }
+    }
+    ```
 
 3.  **Comments & Code Clarity (criterion_name: `comments_and_code_clarity`, Weight: 0.10)**
 
       * **Note: This criterion MUST be evaluated using the `CODE_SAMPLE` variable to analyze comments.**
       * Are comments helpful and explanatory, clarifying the "why" behind non-obvious code?
       * Is the code itself clear, readable, and easy to understand?
-      * **Instructional Value:** Does the sample effectively teach a developer with a basic understanding of `{{LANGUAGE}}` how to perform a specific action with the API? Is the code's primary purpose—demonstrating the API call—clear and not obscured by complex boilerplate or unrelated logic?
+      * **Instructional Value:** Does the sample effectively teach a developer with a basic understanding of `{{LANGUAGE}}` how to perform a specific action with the API?
 
 4.  **Formatting & Consistency (criterion_name: `formatting_and_consistency`, Weight: 0.10)**
 
       * Is the code formatting in `cleaned_code` consistent *within* the sample?
-      * Does it adhere to the canonical style guide for **{{LANGUAGE}}**?
-          * **C#**: Microsoft's C# Coding Conventions.
-          * **C++**: Google C++ Style Guide.
-          * **Go**: `gofmt`.
-          * **Java**: Google Java Style Guide.
-          * **Javascript**: Common standards (e.g., Prettier).
-          * **PHP**: PSR-12.
-          * **Python**: PEP 8 (line length issues can be ignored).
-          * **Ruby**: The Ruby Style Guide.
-          * **Rust**: `rustfmt`.
-          * **Terraform**: `terraform fmt`.
+      * Does it adhere to the canonical style guide for **{{LANGUAGE}}**? (e.g., C#: Microsoft, C++: Google, Go: gofmt, Java: Google, Javascript: Prettier, PHP: PSR-12, Python: PEP 8, Ruby: Ruby Style Guide, Rust: rustfmt, Terraform: terraform fmt).
       * Ignore any errors related to copyright year.
 
 5.  **Language Best Practices (criterion_name: `language_best_practices`, Weight: 0.15)**
 
-      * Does the `cleaned_code` follow idiomatic constructs for **{{LANGUAGE}}**? **Be cautious not to flag common idiomatic patterns (e.g., Ruby's optional parentheses, Python's list comprehensions) as errors.**
+      * Does the `cleaned_code` follow idiomatic constructs for **{{LANGUAGE}}**? **Be cautious not to flag common idiomatic patterns as errors.**
       * Does it avoid anti-patterns or deprecated features?
       * Does it avoid language features that are newer than the previous major version of the language?
       * Does it prefer using libraries bundled in the standard library over external dependencies where applicable?

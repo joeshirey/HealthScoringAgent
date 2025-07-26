@@ -2,7 +2,7 @@ import json
 import os
 import re
 import pydantic
-from typing import AsyncGenerator
+from typing import AsyncGenerator, List, Dict, Any
 from google.adk.agents import BaseAgent, LlmAgent, ParallelAgent, SequentialAgent
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.events import Event
@@ -25,28 +25,18 @@ from agentic_code_analyzer.agents.analysis.json_formatting_agent import JsonForm
 
 class ResultProcessingAgent(BaseAgent):
     """
-    An agent that processes the results of the analysis and formats them into a
-    structured JSON object.
+    An agent that processes the results of the analysis, enforces the single
+    penalty rule, and formats them into a structured JSON object.
 
-    This agent takes the raw output from the other agents in the system and
-    transforms it into a clean, consistent, and easy-to-understand JSON object.
-    It also handles errors and ensures that the final output is always a valid
-    JSON object.
+    This agent takes the raw output from the other agents in the system,
+    deduplicates penalties according to a defined hierarchy, and then
+    transforms the result into a clean, consistent, and easy-to-understand JSON
+    object. It also handles errors and ensures that the final output is always a
+    valid JSON object.
     """
     def _safe_json_load(self, json_string: str) -> dict:
         """
         Safely loads a JSON string, extracting from markdown if necessary.
-
-        This function takes a string as input and tries to parse it as JSON. It
-        can handle strings that are wrapped in markdown code blocks, and it will
-        return an empty dictionary if the string is not valid JSON.
-
-        Args:
-            json_string: The string to parse as JSON.
-
-        Returns:
-            A dictionary representing the parsed JSON, or an empty dictionary if
-            the string is not valid JSON.
         """
         try:
             if '```json' in json_string:
@@ -57,20 +47,52 @@ class ResultProcessingAgent(BaseAgent):
         except (json.JSONDecodeError, AttributeError):
             return {}
 
+    def _enforce_single_penalty_hierarchy(self, evaluation_output: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Enforces the single penalty rule by removing duplicate recommendations
+        based on a predefined hierarchy.
+        """
+        if "criteria_breakdown" not in evaluation_output:
+            return evaluation_output
+
+        # The hierarchy, from highest to lowest priority.
+        hierarchy = [
+            'runnability_and_configuration',
+            'api_effectiveness_and_correctness',
+            'language_best_practices',
+            'formatting_and_consistency',
+            'comments_and_code_clarity',
+            'llm_training_fitness_and_explicitness'
+        ]
+
+        penalized_recommendations = set()
+
+        # Sort criteria according to the hierarchy
+        sorted_criteria = sorted(
+            evaluation_output["criteria_breakdown"],
+            key=lambda x: hierarchy.index(x.get("criterion_name")) if x.get("criterion_name") in hierarchy else len(hierarchy)
+        )
+
+        for criterion in sorted_criteria:
+            if "recommendations_for_llm_fix" not in criterion:
+                continue
+
+            unique_recommendations = []
+            for rec in criterion["recommendations_for_llm_fix"]:
+                if rec not in penalized_recommendations:
+                    unique_recommendations.append(rec)
+                    penalized_recommendations.add(rec)
+
+            # If recommendations were removed, we just update the list.
+            criterion["recommendations_for_llm_fix"] = unique_recommendations
+
+        evaluation_output["criteria_breakdown"] = sorted_criteria
+        return evaluation_output
+
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
         """
         Processes the results of the analysis and yields a final event with the
         structured JSON output.
-
-        This method retrieves the output from the other agents in the system,
-        formats it into a structured JSON object, and then yields a final event
-        with the JSON object as its content.
-
-        Args:
-            ctx: The invocation context for the agent.
-
-        Yields:
-            A final event with the structured JSON output.
         """
         def _to_dict(obj):
             if isinstance(obj, pydantic.BaseModel):
@@ -78,31 +100,30 @@ class ResultProcessingAgent(BaseAgent):
             return obj
 
         try:
+            # The evaluation_review_agent now produces the full structure
             evaluation_output = ctx.session.state.get("evaluation_review_agent_output", {})
-            api_usage_summary_output = ctx.session.state.get("api_analysis_agent_output", "{}")
 
-            analysis_output = {
+            # Enforce the single penalty hierarchy to prevent double-penalizing.
+            deduplicated_evaluation = self._enforce_single_penalty_hierarchy(evaluation_output)
+
+            # Consolidate all final data into one object
+            final_output = {
                 "language": ctx.session.state.get("language_detection_agent_output", "Unknown"),
                 "product_name": ctx.session.state.get("product_name", "Unknown"),
                 "product_category": ctx.session.state.get("product_category", "Unknown"),
                 "region_tags": ctx.session.state.get("region_tag_extraction_agent_output", "").split(","),
-                "analysis": {
-                    "quality_summary": _to_dict(ctx.session.state.get("code_quality_agent_output", {})),
-                    "api_usage_summary": self._safe_json_load(api_usage_summary_output),
-                    "best_practices_summary": _to_dict(ctx.session.state.get("clarity_readability_agent_output", {})),
-                    "runnability_summary": _to_dict(ctx.session.state.get("runnability_agent_output", {})),
-                },
-                "evaluation": _to_dict(evaluation_output),
+                "evaluation": deduplicated_evaluation
             }
-            
-            final_json = json.dumps(analysis_output, indent=2)
+
+            final_json = json.dumps(final_output, indent=2)
+
         except json.JSONDecodeError as e:
             final_json = json.dumps({"error": f"Failed to decode JSON in ResultProcessingAgent: {str(e)}"})
         except KeyError as e:
             final_json = json.dumps({"error": f"Missing expected key in session state: {str(e)}"})
         except Exception as e:
             final_json = json.dumps({"error": f"An unexpected error occurred in ResultProcessingAgent: {type(e).__name__} - {str(e)}"})
-        
+
         yield Event(
             author=self.name,
             content=Content(parts=[Part(text=final_json)]),
@@ -113,22 +134,13 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
     """
     Orchestrates the code analysis workflow using a sequence of parallel and
     sequential agents.
-
-    This agent is the main entry point for the code analysis workflow. It
-    initializes and runs a sequence of other agents, each of which is
-    responsible for a specific part of the analysis. The workflow is divided
-    into three main phases: initial analysis, code analysis, and evaluation.
     """
 
     def __init__(self, **kwargs):
         """
         Initializes the CodeAnalyzerOrchestrator.
-
-        This method creates the sub-agents that make up the code analysis
-        workflow and then initializes the `SequentialAgent` with the sub-agents.
         """
         initial_analysis_agent = self._create_initial_analysis_agent()
-        code_analysis_agent = self._create_code_analysis_agent()
         evaluation_agent = self._create_evaluation_agent()
         result_processor = self._create_result_processing_agent()
 
@@ -136,7 +148,6 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
             name=kwargs.get("name", "code_analyzer_orchestrator"),
             sub_agents=[
                 initial_analysis_agent,
-                code_analysis_agent,
                 evaluation_agent,
                 result_processor,
             ],
@@ -145,82 +156,40 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
     def _create_initial_analysis_agent(self) -> ParallelAgent:
         """
         Creates the parallel agent for the initial analysis phase.
-
-        This agent is responsible for performing the initial analysis of the code,
-        which includes detecting the language, extracting region tags, and
-        categorizing the product.
-
-        It is recommended to use the Gemini Flash model for these tasks, as they
-        are relatively simple and do not require the more advanced capabilities
-        of the Gemini Pro model.
-
-        Returns:
-            A `ParallelAgent` that runs the initial analysis agents in parallel.
         """
         return ParallelAgent(
             name="initial_analysis",
             sub_agents=[
-                LanguageDetectionAgent(name="language_detection_agent", output_key="language_detection_agent_output", model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-2.5-flash-lite")),
-                RegionTagExtractionAgent(name="region_tag_extraction_agent", output_key="region_tag_extraction_agent_output", model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-2.5-flash-lite")),
+                LanguageDetectionAgent(name="language_detection_agent", output_key="language_detection_agent_output", model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-1.5-flash-latest")),
+                RegionTagExtractionAgent(name="region_tag_extraction_agent", output_key="region_tag_extraction_agent_output", model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-1.5-flash-latest")),
                 ProductCategorizationAgent(name="product_categorization_agent"),
-            ],
-        )
-
-    def _create_code_analysis_agent(self) -> ParallelAgent:
-        """
-        Creates the parallel agent for the code analysis phase.
-
-        This agent is responsible for performing the main analysis of the code,
-        which includes assessing code quality, API usage, clarity and
-        readability, and runnability.
-
-        It is recommended to use the Gemini Flash model for these tasks, as they
-        are relatively simple and do not require the more advanced capabilities
-        of the Gemini Pro model.
-
-        Returns:
-            A `ParallelAgent` that runs the code analysis agents in parallel.
-        """
-        return ParallelAgent(
-            name="code_analysis",
-            sub_agents=[
-                CodeQualityAgent(name="code_quality_agent", output_key="code_quality_agent_output", output_schema=CodeQualityOutput, disallow_transfer_to_parent=True, disallow_transfer_to_peers=True, model=os.environ.get("GEMINI_PRO_MODEL", "gemini-2.5-pro")),
-                ApiAnalysisAgent(name="api_analysis_agent", output_key="api_analysis_agent_output", model=os.environ.get("GEMINI_PRO_MODEL", "gemini-2.5-pro")),
-                ClarityReadabilityAgent(name="clarity_readability_agent", output_key="clarity_readability_agent_output", output_schema=ClarityReadabilityOutput, disallow_transfer_to_parent=True, disallow_transfer_to_peers=True, model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-2.5-flash-lite")),
-                RunnabilityAgent(name="runnability_agent", output_key="runnability_agent_output", output_schema=RunnabilityOutput, disallow_transfer_to_parent=True, disallow_transfer_to_peers=True, model=os.environ.get("GEMINI_FLASH_MODEL", "gemini-2.5-flash")),
             ],
         )
 
     def _create_evaluation_agent(self) -> SequentialAgent:
         """
         Creates the sequential agent for the two-step evaluation process.
-
-        This agent is responsible for performing the final evaluation of the code.
-        It first runs an initial analysis agent to get a detailed analysis of the
-        code, and then it runs a JSON formatting agent to format the analysis
-        into a clean, structured JSON object.
-
-        It is recommended to use the Gemini Pro model for the initial analysis,
-        as it is a more complex task that requires a deeper understanding of the
-        code. It is recommended to use the Gemini Flash model for the JSON
-        formatting, as it is a relatively simple task that does not require the
-        more advanced capabilities of the Gemini Pro model.
-
-        Returns:
-            A `SequentialAgent` that runs the evaluation agents in sequence.
+        It first runs an analysis agent that uses tools to generate a detailed
+        review, then a formatting agent to structure the output into JSON.
         """
+        # Step 1: An agent to perform the detailed analysis using tools (like search).
+        # It does NOT have an output_schema, as that conflicts with using tools.
+        # Its text output will be used by the next agent.
         initial_analysis_agent = InitialAnalysisAgent(
             name="initial_analysis_agent",
-            output_key="initial_analysis_output",
-            model=os.environ.get("GEMINI_PRO_MODEL", "gemini-2.5-pro"),
+            output_key="initial_analysis_output", # Store raw text output here
+            model=os.environ.get("GEMINI_PRO_MODEL", "gemini-1.5-pro-latest"),
         )
+
+        # Step 2: An agent to format the raw text from the previous agent into the
+        # required JSON structure. This agent has an output_schema but NO tools.
         json_formatting_agent = JsonFormattingAgent(
             name="json_formatting_agent",
             output_key="evaluation_review_agent_output",
             output_schema=EvaluationOutput,
             disallow_transfer_to_parent=True,
             disallow_transfer_to_peers=True,
-            model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-2.5-flash-lite"),
+            model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-1.5-flash-latest"),
         )
         return SequentialAgent(
             name="evaluation_workflow",
@@ -230,12 +199,5 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
     def _create_result_processing_agent(self) -> ResultProcessingAgent:
         """
         Creates the result processing agent.
-
-        This agent is responsible for taking the raw output from the other agents
-        in the system and transforming it into a clean, consistent, and
-        easy-to-understand JSON object.
-
-        Returns:
-            A `ResultProcessingAgent` that processes the final results.
         """
         return ResultProcessingAgent(name="result_processor")
