@@ -1,38 +1,25 @@
 import json
 import os
 import re
-import pydantic
-from typing import AsyncGenerator, List, Dict, Any
-from google.adk.agents import BaseAgent, LlmAgent, ParallelAgent, SequentialAgent
+from typing import AsyncGenerator, Dict, Any
+
+from google.adk.agents import BaseAgent, ParallelAgent, SequentialAgent
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.events import Event
 from google.genai.types import Content, Part
-from agentic_code_analyzer.models import (
-    ClarityReadabilityOutput,
-    CodeQualityOutput,
-    EvaluationOutput,
-    RunnabilityOutput,
-)
+
+from agentic_code_analyzer.models import EvaluationOutput
 from agentic_code_analyzer.agents.language_detection_agent import LanguageDetectionAgent
 from agentic_code_analyzer.agents.region_tag_agent import RegionTagExtractionAgent
 from agentic_code_analyzer.agents.product_categorization_agent import ProductCategorizationAgent
-from agentic_code_analyzer.agents.analysis.code_quality_agent import CodeQualityAgent
-from agentic_code_analyzer.agents.analysis.api_analysis_agent import ApiAnalysisAgent
-from agentic_code_analyzer.agents.analysis.clarity_readability_agent import ClarityReadabilityAgent
-from agentic_code_analyzer.agents.analysis.runnability_agent import RunnabilityAgent
 from agentic_code_analyzer.agents.analysis.initial_analysis_agent import InitialAnalysisAgent
 from agentic_code_analyzer.agents.analysis.json_formatting_agent import JsonFormattingAgent
+
 
 class ResultProcessingAgent(BaseAgent):
     """
     An agent that processes the results of the analysis, enforces the single
     penalty rule, and formats them into a structured JSON object.
-
-    This agent takes the raw output from the other agents in the system,
-    deduplicates penalties according to a defined hierarchy, and then
-    transforms the result into a clean, consistent, and easy-to-understand JSON
-    object. It also handles errors and ensures that the final output is always a
-    valid JSON object.
     """
     def _safe_json_load(self, json_string: str) -> dict:
         """
@@ -50,12 +37,15 @@ class ResultProcessingAgent(BaseAgent):
     def _enforce_single_penalty_hierarchy(self, evaluation_output: Dict[str, Any]) -> Dict[str, Any]:
         """
         Enforces the single penalty rule by removing duplicate recommendations
-        based on a predefined hierarchy.
+        based on a predefined hierarchy. This method is designed to be robust
+        against malformed input from the LLM.
         """
-        if "criteria_breakdown" not in evaluation_output:
+        if not isinstance(evaluation_output, dict) or "criteria_breakdown" not in evaluation_output:
             return evaluation_output
 
-        # The hierarchy, from highest to lowest priority.
+        if not isinstance(evaluation_output.get("criteria_breakdown"), list):
+            return evaluation_output
+
         hierarchy = [
             'runnability_and_configuration',
             'api_effectiveness_and_correctness',
@@ -64,17 +54,23 @@ class ResultProcessingAgent(BaseAgent):
             'comments_and_code_clarity',
             'llm_training_fitness_and_explicitness'
         ]
-
         penalized_recommendations = set()
 
-        # Sort criteria according to the hierarchy
+        def get_sort_key(criterion: Any) -> int:
+            """Safely get the sort key for a criterion."""
+            if isinstance(criterion, dict):
+                name = criterion.get("criterion_name")
+                if name in hierarchy:
+                    return hierarchy.index(name)
+            return len(hierarchy)
+
         sorted_criteria = sorted(
             evaluation_output["criteria_breakdown"],
-            key=lambda x: hierarchy.index(x.get("criterion_name")) if x.get("criterion_name") in hierarchy else len(hierarchy)
+            key=get_sort_key
         )
 
         for criterion in sorted_criteria:
-            if "recommendations_for_llm_fix" not in criterion:
+            if not isinstance(criterion, dict) or not isinstance(criterion.get("recommendations_for_llm_fix"), list):
                 continue
 
             unique_recommendations = []
@@ -82,8 +78,6 @@ class ResultProcessingAgent(BaseAgent):
                 if rec not in penalized_recommendations:
                     unique_recommendations.append(rec)
                     penalized_recommendations.add(rec)
-
-            # If recommendations were removed, we just update the list.
             criterion["recommendations_for_llm_fix"] = unique_recommendations
 
         evaluation_output["criteria_breakdown"] = sorted_criteria
@@ -94,19 +88,19 @@ class ResultProcessingAgent(BaseAgent):
         Processes the results of the analysis and yields a final event with the
         structured JSON output.
         """
-        def _to_dict(obj):
-            if isinstance(obj, pydantic.BaseModel):
-                return obj.model_dump()
-            return obj
-
         try:
-            # The evaluation_review_agent now produces the full structure
             evaluation_output = ctx.session.state.get("evaluation_review_agent_output", {})
 
-            # Enforce the single penalty hierarchy to prevent double-penalizing.
-            deduplicated_evaluation = self._enforce_single_penalty_hierarchy(evaluation_output)
+            # Convert Pydantic model to dict for processing, if it is one,
+            # without directly importing pydantic.
+            if hasattr(evaluation_output, 'model_dump'):
+                processed_output = evaluation_output.model_dump()
+            else:
+                # Assume it's already a dict or something that can be processed.
+                processed_output = evaluation_output
 
-            # Consolidate all final data into one object
+            deduplicated_evaluation = self._enforce_single_penalty_hierarchy(processed_output)
+
             final_output = {
                 "language": ctx.session.state.get("language_detection_agent_output", "Unknown"),
                 "product_name": ctx.session.state.get("product_name", "Unknown"),
@@ -117,18 +111,17 @@ class ResultProcessingAgent(BaseAgent):
 
             final_json = json.dumps(final_output, indent=2)
 
-        except json.JSONDecodeError as e:
-            final_json = json.dumps({"error": f"Failed to decode JSON in ResultProcessingAgent: {str(e)}"})
-        except KeyError as e:
-            final_json = json.dumps({"error": f"Missing expected key in session state: {str(e)}"})
         except Exception as e:
-            final_json = json.dumps({"error": f"An unexpected error occurred in ResultProcessingAgent: {type(e).__name__} - {str(e)}"})
+            final_json = json.dumps({
+                "error": f"An unexpected error occurred in ResultProcessingAgent: {type(e).__name__} - {str(e)}",
+            })
 
         yield Event(
             author=self.name,
             content=Content(parts=[Part(text=final_json)]),
             turn_complete=True,
         )
+
 
 class CodeAnalyzerOrchestrator(SequentialAgent):
     """
@@ -172,17 +165,12 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         It first runs an analysis agent that uses tools to generate a detailed
         review, then a formatting agent to structure the output into JSON.
         """
-        # Step 1: An agent to perform the detailed analysis using tools (like search).
-        # It does NOT have an output_schema, as that conflicts with using tools.
-        # Its text output will be used by the next agent.
         initial_analysis_agent = InitialAnalysisAgent(
             name="initial_analysis_agent",
-            output_key="initial_analysis_output", # Store raw text output here
+            output_key="initial_analysis_output",
             model=os.environ.get("GEMINI_PRO_MODEL", "gemini-1.5-pro-latest"),
         )
 
-        # Step 2: An agent to format the raw text from the previous agent into the
-        # required JSON structure. This agent has an output_schema but NO tools.
         json_formatting_agent = JsonFormattingAgent(
             name="json_formatting_agent",
             output_key="evaluation_review_agent_output",
