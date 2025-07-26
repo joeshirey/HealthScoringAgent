@@ -18,9 +18,32 @@ A good branch name would be (where issue #33 is the ticket you're working on):
 git checkout -b 33-add-new-agent
 ```
 
+## Setting up for Development
+
+To get started, you'll want to install the project's dependencies, including the development dependencies.
+
+```sh
+# Install main dependencies
+uv pip install -r requirements.txt
+# Install development dependencies
+uv pip install -e .[dev]
+```
+
 ## Get the style right
 
-Your code should follow the PEP 8 style guide. You can use a tool like `flake8` to check your code for compliance.
+Your code should follow the PEP 8 style guide and be free of linting errors. This project uses `ruff` to check for code quality.
+
+To check your code, run the following command from the root of the project:
+
+```sh
+uv run ruff check .
+```
+
+To automatically fix linting errors, you can run:
+
+```sh
+uv run ruff check . --fix
+```
 
 ## Make a Pull Request
 
@@ -52,3 +75,4 @@ Once you've rebased your branch, you'll need to force push the changes to your r
 
 ```sh
 git push --force-with-lease origin 33-add-new-agent
+```

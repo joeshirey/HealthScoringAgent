@@ -2,6 +2,7 @@ import json
 import os
 import re
 from typing import AsyncGenerator, Dict, Any
+import demjson3
 
 from google.adk.agents import BaseAgent, ParallelAgent, SequentialAgent
 from google.adk.agents.invocation_context import InvocationContext
@@ -21,17 +22,31 @@ class ResultProcessingAgent(BaseAgent):
     An agent that processes the results of the analysis, enforces the single
     penalty rule, and formats them into a structured JSON object.
     """
-    def _safe_json_load(self, json_string: str) -> dict:
+    def _safe_json_load(self, data: Any) -> dict:
         """
-        Safely loads a JSON string, extracting from markdown if necessary.
+        Safely loads a JSON string or dictionary, extracting from markdown if necessary.
         """
+        if isinstance(data, dict):
+            return data
+        if not isinstance(data, str):
+            return {}
+
+        json_string = data
         try:
-            if '```json' in json_string:
-                match = re.search(r'```json\s*([\s\S]*?)\s*```', json_string)
-                if match:
-                    json_string = match.group(1)
+            # More flexible regex to find JSON within markdown
+            match = re.search(r'```(json)?\s*({[\s\S]*?})\s*```', json_string, re.IGNORECASE)
+            if match:
+                json_string = match.group(2)
+
+            # First attempt with standard json library
             return json.loads(json_string)
-        except (json.JSONDecodeError, AttributeError):
+        except json.JSONDecodeError:
+            # Fallback to demjson3 for more lenient parsing
+            try:
+                return demjson3.decode(json_string)
+            except demjson3.JSONDecodeError:
+                return {}
+        except AttributeError:
             return {}
 
     def _enforce_single_penalty_hierarchy(self, evaluation_output: Dict[str, Any]) -> Dict[str, Any]:
@@ -43,7 +58,8 @@ class ResultProcessingAgent(BaseAgent):
         if not isinstance(evaluation_output, dict) or "criteria_breakdown" not in evaluation_output:
             return evaluation_output
 
-        if not isinstance(evaluation_output.get("criteria_breakdown"), list):
+        criteria_breakdown = evaluation_output.get("criteria_breakdown")
+        if not isinstance(criteria_breakdown, list):
             return evaluation_output
 
         hierarchy = [
@@ -64,23 +80,34 @@ class ResultProcessingAgent(BaseAgent):
                     return hierarchy.index(name)
             return len(hierarchy)
 
+        # Filter out non-dict items before sorting
+        valid_criteria = [c for c in criteria_breakdown if isinstance(c, dict)]
         sorted_criteria = sorted(
-            evaluation_output["criteria_breakdown"],
+            valid_criteria,
             key=get_sort_key
         )
 
+        processed_criteria = []
         for criterion in sorted_criteria:
-            if not isinstance(criterion, dict) or not isinstance(criterion.get("recommendations_for_llm_fix"), list):
+            recommendations = criterion.get("recommendations_for_llm_fix")
+            if not isinstance(recommendations, list):
+                # If recommendations are not a list, keep the criterion but clear the recommendations
+                criterion["recommendations_for_llm_fix"] = []
+                processed_criteria.append(criterion)
                 continue
 
             unique_recommendations = []
-            for rec in criterion["recommendations_for_llm_fix"]:
+            for rec in recommendations:
+                # Ensure recommendation is hashable, e.g., a string
+                if not isinstance(rec, (str)):
+                    continue
                 if rec not in penalized_recommendations:
                     unique_recommendations.append(rec)
                     penalized_recommendations.add(rec)
             criterion["recommendations_for_llm_fix"] = unique_recommendations
+            processed_criteria.append(criterion)
 
-        evaluation_output["criteria_breakdown"] = sorted_criteria
+        evaluation_output["criteria_breakdown"] = processed_criteria
         return evaluation_output
 
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
@@ -89,15 +116,10 @@ class ResultProcessingAgent(BaseAgent):
         structured JSON output.
         """
         try:
-            evaluation_output = ctx.session.state.get("evaluation_review_agent_output", {})
+            raw_evaluation_output = ctx.session.state.get("evaluation_review_agent_output", "{}")
 
-            # Convert Pydantic model to dict for processing, if it is one,
-            # without directly importing pydantic.
-            if hasattr(evaluation_output, 'model_dump'):
-                processed_output = evaluation_output.model_dump()
-            else:
-                # Assume it's already a dict or something that can be processed.
-                processed_output = evaluation_output
+            # Safely load the JSON data, which might be a string or already a dict
+            processed_output = self._safe_json_load(raw_evaluation_output)
 
             deduplicated_evaluation = self._enforce_single_penalty_hierarchy(processed_output)
 
