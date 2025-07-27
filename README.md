@@ -26,6 +26,7 @@ The Health Scoring Agent is a sophisticated, multi-agent system designed to anal
 - **Advanced Product Categorization:** The system uses a sophisticated, rules-based product categorization engine with an LLM fallback. This allows for accurate and reliable categorization of code samples, even in ambiguous cases.
 - **Code Cleaning:** The system includes a utility to remove comments from the code before analysis. This ensures that the analysis is focused on the executable code and is not influenced by comments.
 - **Web Interface:** The project includes a simple web interface for submitting code samples for analysis. The interface provides a user-friendly way to interact with the system and view the results of the analysis.
+- **Self-Validation Workflow:** Includes a secondary, independent agentic workflow designed to validate the output of the primary analysis. This "peer review" model uses Google Search to verify the claims made by the initial evaluation, adding a robust layer of quality control and increasing the reliability of the final score.
 
 ## 🏗️ System Architecture
 
@@ -38,6 +39,9 @@ The `CodeAnalyzerOrchestrator` is the heart of the system. It is responsible for
 1.  **Initial Analysis:** In this phase, a parallel agent is used to perform a set of initial analysis tasks, including language detection and region tag extraction.
 2.  **Evaluation:** In this phase, a sequential agent is used to perform a two-step evaluation of the code. The first step uses an `InitialAnalysisAgent` to perform a detailed analysis of the code, and the second step uses a `JsonFormattingAgent` to format the analysis into a structured JSON object.
 3.  **Result Processing:** In this phase, a `ResultProcessingAgent` is used to process the results of the analysis, enforce the single penalty rule, and format the final output.
+4.  **Evaluation Validation (API Layer):** After the primary analysis is complete, the API triggers a secondary, independent `ValidationOrchestrator`. This orchestrator also uses a two-step process:
+    *   An `EvaluationVerificationAgent` uses the `google_search` tool to verify the claims made in the original evaluation, focusing on API correctness. It produces a raw text analysis of its findings.
+    *   A `ValidationFormattingAgent` takes this raw text and structures it into a final validation score and reasoning.
 
 ### Agents
 
@@ -116,6 +120,15 @@ Analyzes a code sample and returns a detailed analysis of its health.
 
 - `code` (string, required): The code sample to analyze.
 - `github_link` (string, optional): The GitHub link to the code sample.
+
+**Response Body:**
+
+A JSON object containing the detailed analysis and a validation score for the analysis itself.
+
+- `analysis`: The full, detailed health score analysis from the primary agent workflow.
+- `validation`: An object containing:
+  - `validation_score`: A score from 1-10 on the quality of the analysis.
+  - `reasoning`: A detailed explanation for the validation score.
 
 **Example:**
 

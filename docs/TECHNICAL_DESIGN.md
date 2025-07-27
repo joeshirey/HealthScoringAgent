@@ -19,11 +19,23 @@ The main components of the system are:
 
 ```mermaid
 graph TD
-    A[Orchestrator] --> B(Initial Detection);
-    B --> C(Code Cleaning);
-    C --> D(Product Categorization);
-    D --> E(Evaluation);
-    E --> F(Result Processing);
+    subgraph "Primary Workflow: Code Analysis"
+        A[CodeAnalyzerOrchestrator] --> B(Initial Detection);
+        B --> C(Code Cleaning);
+        C --> D(Product Categorization);
+        D --> E(Evaluation);
+        E --> F(Result Processing);
+    end
+
+    subgraph "Secondary Workflow: Validation"
+        G[ValidationOrchestrator] --> H(Evaluation Verification);
+        H --> I(Validation Formatting);
+    end
+
+    API[API Layer] --> A;
+    A --> API_Response_1[Analysis JSON];
+    API_Response_1 --> G;
+    G --> API_Response_2[Validation JSON];
 ```
 
 ### 2.1. Workflow
@@ -47,31 +59,28 @@ The analysis workflow is managed by the `CodeAnalyzerOrchestrator` and proceeds 
 5.  **Result Processing:**
     *   `ResultProcessingAgent`: Processes the final JSON, enforces the "single penalty" rule to deduplicate recommendations, and combines all data into the final output.
 
+6.  **Validation (API-Triggered, Sequential):**
+    *   After the primary analysis is complete, the API layer triggers the `ValidationOrchestrator`.
+    *   `EvaluationVerificationAgent`: This agent takes the original code and the completed analysis as input. It uses the `google_search` tool to verify the specific claims made in the analysis, particularly around API usage. It outputs a raw, unstructured text summary of its findings.
+    *   `ValidationFormattingAgent`: This agent takes the raw text from the verification agent and converts it into a structured JSON object containing a validation score (1-10) and detailed reasoning, based on the `EvaluationValidationOutput` schema.
+
 ```mermaid
 sequenceDiagram
     participant User
     participant API
-    participant Orchestrator
-    participant InitialDetection
-    participant CodeCleaning
-    participant ProductCategory
-    participant Evaluation
-    participant ResultProcessing
+    participant User
+    participant API
+    participant CodeAnalyzerOrchestrator
+    participant ValidationOrchestrator
 
     User->>API: POST /analyze
-    API->>Orchestrator: analyze_code(code)
-    Orchestrator->>InitialDetection: run_async()
-    InitialDetection-->>Orchestrator: Language & Region Tags
-    Orchestrator->>CodeCleaning: run_async()
-    CodeCleaning-->>Orchestrator: Cleaned Code
-    Orchestrator->>ProductCategory: run_async()
-    ProductCategory-->>Orchestrator: Product Name & Category
-    Orchestrator->>Evaluation: run_async()
-    Evaluation-->>Orchestrator: Structured JSON Analysis
-    Orchestrator->>ResultProcessing: run_async()
-    ResultProcessing-->>Orchestrator: Final Processed JSON
-    Orchestrator-->>API: final_response
-    API-->>User: 200 OK
+    API->>CodeAnalyzerOrchestrator: analyze_code(code)
+    CodeAnalyzerOrchestrator-->>API: Analysis JSON
+
+    API->>ValidationOrchestrator: validate_analysis(code, analysis_json)
+    ValidationOrchestrator-->>API: Validation JSON
+
+    API-->>User: 200 OK (Combined Result)
 ```
 
 ## 3. Agent Design
@@ -98,6 +107,12 @@ The `CodeAnalyzerOrchestrator` is a `SequentialAgent` that defines the primary w
 
 The `ResultProcessingAgent` is a `BaseAgent` that performs final data cleaning and aggregation. Its most important function is to enforce the single penalty hierarchy, which prevents redundant recommendations from appearing in the final output.
 
+### 3.5. Validation Agents
+
+*   **`ValidationOrchestrator`**: A `SequentialAgent` that manages the two-step validation workflow.
+*   **`EvaluationVerificationAgent`**: An `LlmAgent` equipped with the `google_search` tool. It is guided by the `evaluation_validation_prompt.md` to critically review the original analysis and output its findings as raw text.
+*   **`ValidationFormattingAgent`**: An `LlmAgent` that takes the raw text from the verification agent and uses the `validation_formatting_prompt.md` to structure it into the `EvaluationValidationOutput` Pydantic model.
+
 ## 4. Prompt Engineering
 
 The quality of the analysis is highly dependent on the quality of the prompts. This system employs a sophisticated prompt engineering strategy.
@@ -108,11 +123,11 @@ The quality of the analysis is highly dependent on the quality of the prompts. T
 
 ## 5. Data Models
 
-The system uses Pydantic models to define the expected structure of the final JSON output. The key model is `EvaluationOutput`, which is enforced by the `JsonFormattingAgent`. Other prompts for sub-agents (like `runnability_prompt.md`) also define their own JSON schemas, which are then consolidated into the final `EvaluationOutput`.
+The system uses Pydantic models to define the expected structure of its outputs.
 
 ### 5.1. `EvaluationOutput` Schema
 
-This model, defined in `json_conversion.md`, structures the final analysis.
+This model, defined in `agentic_code_analyzer/models.py`, structures the primary analysis. It is enforced by the `JsonFormattingAgent`.
 
 ```json
 {
@@ -138,6 +153,17 @@ This model, defined in `json_conversion.md`, structures the final analysis.
 }
 ```
 
+### 5.2. `EvaluationValidationOutput` Schema
+
+This model, defined in `agentic_code_analyzer/validation_model.py`, structures the output of the validation workflow. It is enforced by the `ValidationFormattingAgent`.
+
+```json
+{
+  "validation_score": "integer (1-10)",
+  "reasoning": "string"
+}
+```
+
 ## 6. API
 
 The system provides a REST API for analyzing code samples. The API is built using FastAPI and is defined in the `api/main.py` file.
@@ -150,6 +176,11 @@ Analyzes a code sample and returns a detailed analysis of its health.
 
 *   `code` (string, required): The code sample to analyze.
 *   `github_link` (string, optional): The GitHub link to the code sample.
+
+**Response Body (`ValidatedAnalysis`):**
+
+*   `analysis`: The full JSON object from the primary analysis workflow.
+*   `validation`: A JSON object containing the `validation_score` and `reasoning` from the validation workflow.
 
 ### 6.2. `POST /analyze_github_link`
 
