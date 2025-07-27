@@ -11,12 +11,22 @@ from google.adk.events import Event
 from google.genai.types import Content, Part
 
 from agentic_code_analyzer.models import EvaluationOutput
-from agentic_code_analyzer.agents.deterministic_language_detection_agent import DeterministicLanguageDetectionAgent
-from agentic_code_analyzer.agents.deterministic_region_tag_agent import DeterministicRegionTagAgent
-from agentic_code_analyzer.agents.product_categorization_agent import ProductCategorizationAgent
+from agentic_code_analyzer.agents.deterministic_language_detection_agent import (
+    DeterministicLanguageDetectionAgent,
+)
+from agentic_code_analyzer.agents.deterministic_region_tag_agent import (
+    DeterministicRegionTagAgent,
+)
+from agentic_code_analyzer.agents.product_categorization_agent import (
+    ProductCategorizationAgent,
+)
 from agentic_code_analyzer.agents.code_cleaning_agent import CodeCleaningAgent
-from agentic_code_analyzer.agents.analysis.initial_analysis_agent import InitialAnalysisAgent
-from agentic_code_analyzer.agents.analysis.json_formatting_agent import JsonFormattingAgent
+from agentic_code_analyzer.agents.analysis.initial_analysis_agent import (
+    InitialAnalysisAgent,
+)
+from agentic_code_analyzer.agents.analysis.json_formatting_agent import (
+    JsonFormattingAgent,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +36,7 @@ class ResultProcessingAgent(BaseAgent):
     An agent that processes the results of the analysis, enforces the single
     penalty rule, and formats them into a structured JSON object.
     """
+
     def _safe_json_load(self, data: Any) -> dict:
         """
         Safely loads a JSON string or dictionary, extracting from markdown if necessary.
@@ -38,7 +49,9 @@ class ResultProcessingAgent(BaseAgent):
         json_string = data
         try:
             # More flexible regex to find JSON within markdown
-            match = re.search(r'```(json)?\s*({[\s\S]*?})\s*```', json_string, re.IGNORECASE)
+            match = re.search(
+                r"```(json)?\s*({[\s\S]*?})\s*```", json_string, re.IGNORECASE
+            )
             if match:
                 json_string = match.group(2)
 
@@ -56,13 +69,18 @@ class ResultProcessingAgent(BaseAgent):
         except AttributeError:
             return {}
 
-    def _enforce_single_penalty_hierarchy(self, evaluation_output: Dict[str, Any]) -> Dict[str, Any]:
+    def _enforce_single_penalty_hierarchy(
+        self, evaluation_output: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Enforces the single penalty rule by removing duplicate recommendations
         based on a predefined hierarchy. This method is designed to be robust
         against malformed input from the LLM.
         """
-        if not isinstance(evaluation_output, dict) or "criteria_breakdown" not in evaluation_output:
+        if (
+            not isinstance(evaluation_output, dict)
+            or "criteria_breakdown" not in evaluation_output
+        ):
             return evaluation_output
 
         criteria_breakdown = evaluation_output.get("criteria_breakdown")
@@ -70,12 +88,12 @@ class ResultProcessingAgent(BaseAgent):
             return evaluation_output
 
         hierarchy = [
-            'runnability_and_configuration',
-            'api_effectiveness_and_correctness',
-            'language_best_practices',
-            'formatting_and_consistency',
-            'comments_and_code_clarity',
-            'llm_training_fitness_and_explicitness'
+            "runnability_and_configuration",
+            "api_effectiveness_and_correctness",
+            "language_best_practices",
+            "formatting_and_consistency",
+            "comments_and_code_clarity",
+            "llm_training_fitness_and_explicitness",
         ]
         penalized_recommendations = set()
 
@@ -89,10 +107,7 @@ class ResultProcessingAgent(BaseAgent):
 
         # Filter out non-dict items before sorting
         valid_criteria = [c for c in criteria_breakdown if isinstance(c, dict)]
-        sorted_criteria = sorted(
-            valid_criteria,
-            key=get_sort_key
-        )
+        sorted_criteria = sorted(valid_criteria, key=get_sort_key)
 
         processed_criteria = []
         for criterion in sorted_criteria:
@@ -117,38 +132,54 @@ class ResultProcessingAgent(BaseAgent):
         evaluation_output["criteria_breakdown"] = processed_criteria
         return evaluation_output
 
-    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+    async def _run_async_impl(
+        self, ctx: InvocationContext
+    ) -> AsyncGenerator[Event, None]:
         """
         Processes the results of the analysis and yields a final event with the
         structured JSON output.
         """
         logger.info(f"[{self.name}] Starting result processing.")
         try:
-            raw_evaluation_output = ctx.session.state.get("evaluation_review_agent_output", "{}")
+            raw_evaluation_output = ctx.session.state.get(
+                "evaluation_review_agent_output", "{}"
+            )
             logger.info(f"[{self.name}] Raw evaluation output received.")
 
             processed_output = self._safe_json_load(raw_evaluation_output)
             logger.info(f"[{self.name}] Safely loaded JSON output.")
 
-            deduplicated_evaluation = self._enforce_single_penalty_hierarchy(processed_output)
+            deduplicated_evaluation = self._enforce_single_penalty_hierarchy(
+                processed_output
+            )
             logger.info(f"[{self.name}] Enforced single penalty hierarchy.")
 
             final_output = {
-                "language": ctx.session.state.get("language_detection_agent_output", "Unknown"),
+                "language": ctx.session.state.get(
+                    "language_detection_agent_output", "Unknown"
+                ),
                 "product_name": ctx.session.state.get("product_name", "Unknown"),
-                "product_category": ctx.session.state.get("product_category", "Unknown"),
-                "region_tags": ctx.session.state.get("region_tag_extraction_agent_output", "").split(","),
-                "evaluation": deduplicated_evaluation
+                "product_category": ctx.session.state.get(
+                    "product_category", "Unknown"
+                ),
+                "region_tags": ctx.session.state.get(
+                    "region_tag_extraction_agent_output", ""
+                ).split(","),
+                "evaluation": deduplicated_evaluation,
             }
 
             final_json = json.dumps(final_output, indent=2)
             logger.info(f"[{self.name}] Successfully created final JSON output.")
 
         except Exception as e:
-            logger.error(f"[{self.name}] An unexpected error occurred: {e}", exc_info=True)
-            final_json = json.dumps({
-                "error": f"An unexpected error occurred in ResultProcessingAgent: {type(e).__name__} - {str(e)}",
-            })
+            logger.error(
+                f"[{self.name}] An unexpected error occurred: {e}", exc_info=True
+            )
+            final_json = json.dumps(
+                {
+                    "error": f"An unexpected error occurred in ResultProcessingAgent: {type(e).__name__} - {str(e)}",
+                }
+            )
 
         yield Event(
             author=self.name,
@@ -169,7 +200,9 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         """
         initial_detection_agent = self._create_initial_detection_agent()
         code_cleaning_agent = CodeCleaningAgent(name="code_cleaning_agent")
-        product_categorization_agent = ProductCategorizationAgent(name="product_categorization_agent")
+        product_categorization_agent = ProductCategorizationAgent(
+            name="product_categorization_agent"
+        )
         evaluation_agent = self._create_evaluation_agent()
         result_processor = self._create_result_processing_agent()
 

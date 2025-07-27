@@ -1,5 +1,6 @@
 from google.adk.agents import LlmAgent
 
+
 class ClarityReadabilityAgent(LlmAgent):
     """
     An agent that analyzes code for clarity and readability.
@@ -18,5 +19,7 @@ class ClarityReadabilityAgent(LlmAgent):
         readability.
         """
         super().__init__(**kwargs)
-        with open("agentic_code_analyzer/prompts/clarity_readability_prompt.md", "r") as f:
+        with open(
+            "agentic_code_analyzer/prompts/clarity_readability_prompt.md", "r"
+        ) as f:
             self.instruction = f.read()

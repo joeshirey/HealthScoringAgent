@@ -7,6 +7,7 @@ from google.adk.events import Event
 
 logger = logging.getLogger(__name__)
 
+
 class CodeCleaningAgent(BaseAgent):
     """
     An agent that removes comments from a code snippet based on its language.
@@ -18,7 +19,20 @@ class CodeCleaningAgent(BaseAgent):
         """
         if language.lower() in ["python", "shell", "ruby"]:
             return re.sub(r"#.*", "", code)
-        elif language.lower() in ["javascript", "java", "c", "c++", "c#", "go", "swift", "typescript", "kotlin", "rust", "php", "terraform"]:
+        elif language.lower() in [
+            "javascript",
+            "java",
+            "c",
+            "c++",
+            "c#",
+            "go",
+            "swift",
+            "typescript",
+            "kotlin",
+            "rust",
+            "php",
+            "terraform",
+        ]:
             code = re.sub(r"//.*", "", code)
             code = re.sub(r"/\*.*?\*/", "", code, flags=re.DOTALL)
             return code
@@ -36,11 +50,11 @@ class CodeCleaningAgent(BaseAgent):
         logger.info(f"[{self.name}] Starting code cleaning.")
         code_snippet = ctx.session.state.get("code_snippet", "")
         language = ctx.session.state.get("language_detection_agent_output", "Unknown")
-        
+
         cleaned_code = self._remove_comments(code_snippet, language)
         logger.info(f"[{self.name}] Code cleaning complete for language: {language}.")
-        
+
         ctx.session.state["cleaned_code"] = cleaned_code
-        
+
         if False:
             yield

@@ -1,4 +1,3 @@
-
 import json
 import logging
 import re
@@ -27,6 +26,7 @@ app = FastAPI(
     version="1.0.0",
 )
 
+
 def remove_comments(code: str, language: str) -> str:
     """
     Removes comments from a code string based on the language.
@@ -45,7 +45,20 @@ def remove_comments(code: str, language: str) -> str:
     if language.lower() in ["python", "shell", "ruby"]:
         # Removes single-line comments starting with #
         return re.sub(r"#.*", "", code)
-    elif language.lower() in ["javascript", "java", "c", "c++", "c#", "go", "swift", "typescript", "kotlin", "rust", "php", "terraform"]:
+    elif language.lower() in [
+        "javascript",
+        "java",
+        "c",
+        "c++",
+        "c#",
+        "go",
+        "swift",
+        "typescript",
+        "kotlin",
+        "rust",
+        "php",
+        "terraform",
+    ]:
         # Removes single-line // comments and multi-line /* ... */ comments
         code = re.sub(r"//.*", "", code)
         code = re.sub(r"/\*.*?\*/", "", code, flags=re.DOTALL)
@@ -57,25 +70,32 @@ def remove_comments(code: str, language: str) -> str:
         # Return original code if language is not supported
         return code
 
+
 class CodeRequest(BaseModel):
     """
     A request to analyze a code sample.
     """
+
     code: str
     github_link: Optional[str] = None
+
 
 class GitHubLinkRequest(BaseModel):
     """
     A request to analyze a code sample from a GitHub link.
     """
+
     github_link: str
+
 
 @app.post("/analyze", summary="Analyze a code sample")
 async def analyze_code(request: CodeRequest):
     """
     Analyzes a code sample and returns a detailed analysis of its health.
     """
-    logger.info(f"Received request to analyze code snippet. Link provided: {bool(request.github_link)}")
+    logger.info(
+        f"Received request to analyze code snippet. Link provided: {bool(request.github_link)}"
+    )
     session_service = InMemorySessionService()
     await session_service.create_session(
         app_name="agentic_code_analyzer",
@@ -99,18 +119,27 @@ async def analyze_code(request: CodeRequest):
         session_id="api_session",
         new_message=types.Content(parts=[types.Part(text=request.code)]),
     ):
-        if event.is_final_response() and event.content and event.content.parts and event.content.parts[0].text:
+        if (
+            event.is_final_response()
+            and event.content
+            and event.content.parts
+            and event.content.parts[0].text
+        ):
             final_response = event.content.parts[0].text
-    
+
     logger.info("Agent workflow finished.")
 
     try:
         return json.loads(final_response)
     except json.JSONDecodeError:
         logger.error("Failed to parse final response from agent as JSON.")
-        raise HTTPException(status_code=500, detail="Failed to parse agent's final response as JSON.")
+        raise HTTPException(
+            status_code=500, detail="Failed to parse agent's final response as JSON."
+        )
+
 
 ALLOWED_DOMAINS = {"github.com", "raw.githubusercontent.com"}
+
 
 @app.post("/analyze_github_link", summary="Analyze a code sample from a GitHub link")
 async def analyze_github_link(request: GitHubLinkRequest):
@@ -124,7 +153,9 @@ async def analyze_github_link(request: GitHubLinkRequest):
             logger.error(f"Invalid GitHub domain: {parsed_url.hostname}")
             raise HTTPException(status_code=400, detail="Invalid GitHub domain.")
 
-        raw_url = request.github_link.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+        raw_url = request.github_link.replace(
+            "github.com", "raw.githubusercontent.com"
+        ).replace("/blob/", "/")
         async with httpx.AsyncClient() as client:
             response = await client.get(raw_url)
             response.raise_for_status()
@@ -132,8 +163,11 @@ async def analyze_github_link(request: GitHubLinkRequest):
         logger.info(f"Successfully fetched code from {raw_url}")
     except httpx.HTTPStatusError as e:
         logger.error(f"Error fetching code from GitHub: {e}")
-        raise HTTPException(status_code=400, detail=f"Error fetching code from GitHub: {e}")
+        raise HTTPException(
+            status_code=400, detail=f"Error fetching code from GitHub: {e}"
+        )
 
     return await analyze_code(CodeRequest(code=code, github_link=request.github_link))
+
 
 app.mount("/", StaticFiles(directory="api/ui", html=True), name="ui")

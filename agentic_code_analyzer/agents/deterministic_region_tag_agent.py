@@ -4,9 +4,9 @@ from typing import AsyncGenerator
 from google.adk.agents import BaseAgent
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.events import Event
-from google.genai.types import Content, Part
 
 logger = logging.getLogger(__name__)
+
 
 class DeterministicRegionTagAgent(BaseAgent):
     """
@@ -22,19 +22,19 @@ class DeterministicRegionTagAgent(BaseAgent):
         """
         logger.info(f"[{self.name}] Starting region tag extraction.")
         code_snippet = ctx.session.state.get("code_snippet", "")
-        
+
         # Regex to find all [START ...] and [END ...] tags
         start_tags = re.findall(r"\[START\s+([a-zA-Z0-9_]+)\]", code_snippet)
         end_tags = re.findall(r"\[END\s+([a-zA-Z0-9_]+)\]", code_snippet)
-        
+
         # Combine and find unique tags
         all_tags = sorted(list(set(start_tags + end_tags)))
-        
+
         tags_str = ",".join(all_tags)
         logger.info(f"[{self.name}] Found {len(all_tags)} unique region tags.")
-        
+
         ctx.session.state["region_tag_extraction_agent_output"] = tags_str
-        
+
         # This is a non-yielding generator
         if False:
             yield

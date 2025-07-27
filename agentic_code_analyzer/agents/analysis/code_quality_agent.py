@@ -1,5 +1,6 @@
 from google.adk.agents import LlmAgent
 
+
 class CodeQualityAgent(LlmAgent):
     """
     An agent that analyzes code for quality.

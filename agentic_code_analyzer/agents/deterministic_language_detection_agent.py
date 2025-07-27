@@ -39,56 +39,56 @@ FILE_EXTENSION_MAP = {
 LANGUAGE_KEYWORDS = {
     # PHP has a very distinctive opening tag.
     "PHP": [
-        re.compile(r'<\?php'),
-        re.compile(r'\bpublic\s+function\s+'),
-        re.compile(r'->\w+')
+        re.compile(r"<\?php"),
+        re.compile(r"\bpublic\s+function\s+"),
+        re.compile(r"->\w+"),
     ],
     # C# is specific with `using` and properties.
     "C#": [
-        re.compile(r'^\s*using\s+System(\.\w*)*;', re.MULTILINE),
-        re.compile(r'\bnamespace\s+[\w\.]+'),
-        re.compile(r'\{\s*get;\s*(private\s*)?set;\s*\}')
+        re.compile(r"^\s*using\s+System(\.\w*)*;", re.MULTILINE),
+        re.compile(r"\bnamespace\s+[\w\.]+"),
+        re.compile(r"\{\s*get;\s*(private\s*)?set;\s*\}"),
     ],
     # Java is specific with its `import java.` and main method signature.
     "Java": [
-        re.compile(r'^\s*import\s+java\.\w+\.\w+;', re.MULTILINE),
-        re.compile(r'public\s+static\s+void\s+main\s*\(String'),
+        re.compile(r"^\s*import\s+java\.\w+\.\w+;", re.MULTILINE),
+        re.compile(r"public\s+static\s+void\s+main\s*\(String"),
     ],
     # Python's syntax is quite regular.
     "Python": [
-        re.compile(r'^\s*def\s+\w+\(.*\):', re.MULTILINE),
-        re.compile(r'^\s*import\s+(os|sys|re)\b', re.MULTILINE)
+        re.compile(r"^\s*def\s+\w+\(.*\):", re.MULTILINE),
+        re.compile(r"^\s*import\s+(os|sys|re)\b", re.MULTILINE),
     ],
     # Go's package and func syntax are strong indicators.
     "Go": [
-        re.compile(r'^\s*package\s+\w+', re.MULTILINE),
-        re.compile(r'^\s*import\s+\(', re.MULTILINE),
-        re.compile(r'\bfunc\s+\w+\s*\(.*\)\s*\{')
+        re.compile(r"^\s*package\s+\w+", re.MULTILINE),
+        re.compile(r"^\s*import\s+\(", re.MULTILINE),
+        re.compile(r"\bfunc\s+\w+\s*\(.*\)\s*\{"),
     ],
     # Ruby's `def` syntax is distinct from Python's.
     "Ruby": [
-        re.compile(r'^\s*def\s+\w+[^:]*$', re.MULTILINE),
+        re.compile(r"^\s*def\s+\w+[^:]*$", re.MULTILINE),
         re.compile(r'\brequire\s+[\'"]\w+[\'"]'),
     ],
     # C++ relies on `#include`.
     "C++": [
-        re.compile(r'^\s*#include\s*<[a-zA-Z0-9]+>', re.MULTILINE),
-        re.compile(r'\bstd::(cout|vector|string)')
+        re.compile(r"^\s*#include\s*<[a-zA-Z0-9]+>", re.MULTILINE),
+        re.compile(r"\bstd::(cout|vector|string)"),
     ],
     # Rust has several unique keywords.
     "Rust": [
-        re.compile(r'\b(fn|struct|enum|impl|let\s+mut|use\s+std::)\s+'),
-        re.compile(r'println!\s*\(')
+        re.compile(r"\b(fn|struct|enum|impl|let\s+mut|use\s+std::)\s+"),
+        re.compile(r"println!\s*\("),
     ],
     # Terraform's syntax is very declarative.
     "Terraform": [
-        re.compile(r'^\s*(resource|provider|variable|output)\s+', re.MULTILINE)
+        re.compile(r"^\s*(resource|provider|variable|output)\s+", re.MULTILINE)
     ],
     # Javascript is last as its keywords are more common.
     "Javascript": [
-        re.compile(r'\b(const|let|var)\s+\w+\s*='),
-        re.compile(r'\bconsole\.log\s*\(')
-    ]
+        re.compile(r"\b(const|let|var)\s+\w+\s*="),
+        re.compile(r"\bconsole\.log\s*\("),
+    ],
 }
 
 
@@ -118,7 +118,9 @@ class DeterministicLanguageDetectionAgent(BaseAgent):
                 _, extension = os.path.splitext(parsed_url.path)
                 if extension in FILE_EXTENSION_MAP:
                     final_language = FILE_EXTENSION_MAP[extension]
-                    logger.info(f"Language identified as '{final_language}' from file extension '{extension}'.")
+                    logger.info(
+                        f"Language identified as '{final_language}' from file extension '{extension}'."
+                    )
             except Exception as e:
                 logger.warning(f"Could not parse GitHub link '{github_link}': {e}")
 
@@ -132,7 +134,9 @@ class DeterministicLanguageDetectionAgent(BaseAgent):
                     break  # Stop after the first match
 
         if final_language == "Unknown":
-            logger.warning("Could not determine language from file extension or keywords.")
+            logger.warning(
+                "Could not determine language from file extension or keywords."
+            )
 
         logger.info(f"Final detected language: {final_language}")
         ctx.session.state["language_detection_agent_output"] = final_language

@@ -1,6 +1,7 @@
 from google.adk.agents import LlmAgent
 from google.adk.tools import google_search
 
+
 class InitialAnalysisAgent(LlmAgent):
     """
     An agent that performs the initial, detailed analysis of the code.
@@ -24,11 +25,7 @@ class InitialAnalysisAgent(LlmAgent):
         with open("agentic_code_analyzer/prompts/consolidated_eval.md", "r") as f:
             prompt_template = f.read()
         instruction = f"{system_instructions}\n\n{prompt_template}"
-        super().__init__(
-            instruction=instruction,
-            tools=[google_search],
-            **kwargs
-        )
+        super().__init__(instruction=instruction, tools=[google_search], **kwargs)
 
     def _pre_run(self, ctx):
         """

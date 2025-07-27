@@ -8,10 +8,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 async def main():
     """Runs the agentic code analyzer."""
     try:
-        with open('sample.py', 'r') as f:
+        with open("sample.py", "r") as f:
             code_snippet = f.read()
         if not code_snippet:
             print("Error: sample.py is empty.")
@@ -38,12 +39,15 @@ async def main():
 
     final_response = ""
     async for event in runner.run_async(
-        user_id="test_user", session_id="test_session", new_message=types.Content(parts=[types.Part(text=code_snippet)])
+        user_id="test_user",
+        session_id="test_session",
+        new_message=types.Content(parts=[types.Part(text=code_snippet)]),
     ):
         if event.is_final_response():
             final_response = event.content.parts[0].text
 
     print(json.dumps(json.loads(final_response), indent=4))
+
 
 if __name__ == "__main__":
     asyncio.run(main())

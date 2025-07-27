@@ -1,12 +1,13 @@
 import pytest
 import json
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock
 
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai.types import Content, Part
 
 from agentic_code_analyzer.orchestrator import CodeAnalyzerOrchestrator
+
 
 @pytest.fixture
 def mock_llm_agents(mocker):
@@ -23,7 +24,13 @@ def mock_llm_agents(mocker):
     mock_product_categorization = mocker.patch(
         "agentic_code_analyzer.orchestrator.ProductCategorizationAgent._run_async_impl"
     )
-    return mock_code_cleaning, mock_initial_analysis, mock_json_formatting, mock_product_categorization
+    return (
+        mock_code_cleaning,
+        mock_initial_analysis,
+        mock_json_formatting,
+        mock_product_categorization,
+    )
+
 
 @pytest.mark.asyncio
 async def test_orchestrator_full_run(mock_llm_agents):
@@ -31,7 +38,12 @@ async def test_orchestrator_full_run(mock_llm_agents):
     Tests the full end-to-end run of the CodeAnalyzerOrchestrator with
     LLM-dependent agents mocked out.
     """
-    mock_code_cleaning, mock_initial_analysis, mock_json_formatting, mock_product_categorization = mock_llm_agents
+    (
+        mock_code_cleaning,
+        mock_initial_analysis,
+        mock_json_formatting,
+        mock_product_categorization,
+    ) = mock_llm_agents
 
     # Define mock side effects for agents to update the session state
     async def mock_initial_analysis_side_effect(ctx):
@@ -46,17 +58,19 @@ async def test_orchestrator_full_run(mock_llm_agents):
                     "criterion_name": "api_effectiveness_and_correctness",
                     "score": 9,
                     "reasoning": "The code correctly uses the API.",
-                    "recommendations_for_llm_fix": ["rec_A"]
+                    "recommendations_for_llm_fix": ["rec_A"],
                 },
                 {
                     "criterion_name": "language_best_practices",
                     "score": 7,
                     "reasoning": "Some best practices are not followed.",
-                    "recommendations_for_llm_fix": ["rec_A", "rec_B"]
-                }
-            ]
+                    "recommendations_for_llm_fix": ["rec_A", "rec_B"],
+                },
+            ],
         }
-        ctx.session.state["evaluation_review_agent_output"] = json.dumps(mock_evaluation_output)
+        ctx.session.state["evaluation_review_agent_output"] = json.dumps(
+            mock_evaluation_output
+        )
         yield MagicMock()
 
     async def mock_product_cat_side_effect(ctx):
@@ -105,7 +119,9 @@ async def test_orchestrator_full_run(mock_llm_agents):
     # 2. Run the orchestrator
     final_response = ""
     async for event in runner.run_async(
-        user_id="test_user", session_id="test_session", new_message=Content(parts=[Part(text=code_snippet)])
+        user_id="test_user",
+        session_id="test_session",
+        new_message=Content(parts=[Part(text=code_snippet)]),
     ):
         if event.is_final_response():
             final_response = event.content.parts[0].text
@@ -123,10 +139,18 @@ async def test_orchestrator_full_run(mock_llm_agents):
     evaluation = final_data["evaluation"]
     assert evaluation["overall_score"] == 85
 
-    breakdown = sorted(evaluation["criteria_breakdown"], key=lambda x: x['criterion_name'])
+    breakdown = sorted(
+        evaluation["criteria_breakdown"], key=lambda x: x["criterion_name"]
+    )
 
-    api_crit = next(c for c in breakdown if c["criterion_name"] == "api_effectiveness_and_correctness")
-    lang_crit = next(c for c in breakdown if c["criterion_name"] == "language_best_practices")
+    api_crit = next(
+        c
+        for c in breakdown
+        if c["criterion_name"] == "api_effectiveness_and_correctness"
+    )
+    lang_crit = next(
+        c for c in breakdown if c["criterion_name"] == "language_best_practices"
+    )
 
     assert api_crit["recommendations_for_llm_fix"] == ["rec_A"]
     assert lang_crit["recommendations_for_llm_fix"] == ["rec_B"]

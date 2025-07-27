@@ -7,6 +7,7 @@ from agentic_code_analyzer.tools.product_categorization import categorize_sample
 
 logger = logging.getLogger(__name__)
 
+
 class ProductCategorizationAgent(BaseAgent):
     """
     An agent that categorizes the code sample into a product.
@@ -17,7 +18,9 @@ class ProductCategorizationAgent(BaseAgent):
     cases.
     """
 
-    async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+    async def _run_async_impl(
+        self, ctx: InvocationContext
+    ) -> AsyncGenerator[Event, None]:
         """
         Categorizes the code sample and updates the session state with the
         results.
@@ -33,8 +36,10 @@ class ProductCategorizationAgent(BaseAgent):
             region_tag=region_tag,
             llm_fallback=True,
         )
-        
-        logger.info(f"[{self.name}] Categorized as '{product}' in '{category}'. LLM used: {llm_used}.")
+
+        logger.info(
+            f"[{self.name}] Categorized as '{product}' in '{category}'. LLM used: {llm_used}."
+        )
 
         ctx.session.state["product_category"] = category
         ctx.session.state["product_name"] = product

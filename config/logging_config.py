@@ -1,6 +1,7 @@
 import logging
 import sys
 
+
 def setup_logging():
     """
     Configures a standardized logger for the application.
