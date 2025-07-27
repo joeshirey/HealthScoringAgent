@@ -4,12 +4,16 @@ import re
 import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from typing import Optional
+from typing import Optional, Union, Dict, Any
 from pydantic import BaseModel
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 from agentic_code_analyzer.orchestrator import CodeAnalyzerOrchestrator
+from agentic_code_analyzer.agents.evaluation_validation_agent import (
+    ValidationOrchestrator,
+)
+from agentic_code_analyzer.validation_model import EvaluationValidationOutput
 from config.logging_config import setup_logging
 from dotenv import load_dotenv
 from urllib.parse import urlparse
@@ -88,7 +92,18 @@ class GitHubLinkRequest(BaseModel):
     github_link: str
 
 
-@app.post("/analyze", summary="Analyze a code sample")
+class ValidatedAnalysis(BaseModel):
+    """
+    Represents the final, validated analysis output.
+    """
+
+    analysis: Dict[str, Any]
+    validation: EvaluationValidationOutput
+
+
+@app.post(
+    "/analyze", response_model=ValidatedAnalysis, summary="Analyze a code sample"
+)
 async def analyze_code(request: CodeRequest):
     """
     Analyzes a code sample and returns a detailed analysis of its health.
@@ -130,12 +145,73 @@ async def analyze_code(request: CodeRequest):
     logger.info("Agent workflow finished.")
 
     try:
-        return json.loads(final_response)
+        analysis_result = json.loads(final_response)
     except json.JSONDecodeError:
-        logger.error("Failed to parse final response from agent as JSON.")
+        logger.error("Failed to parse final analysis from agent as JSON.")
         raise HTTPException(
-            status_code=500, detail="Failed to parse agent's final response as JSON."
+            status_code=500, detail="Failed to parse agent's final analysis as JSON."
         )
+
+    # --- STAGE 2: Run the Evaluation Validation Agent ---
+    logger.info("Starting validation of the evaluation...")
+    validation_orchestrator = ValidationOrchestrator(
+        name="validation_orchestrator"
+    )
+    validation_runner = Runner(
+        agent=validation_orchestrator,
+        app_name="agentic_code_analyzer",
+        session_service=session_service,  # Can reuse the session service
+    )
+
+    validation_input = f"""
+Original Code:
+```
+{request.code}
+```
+
+Original Evaluation JSON:
+```json
+{json.dumps(analysis_result, indent=2)}
+```
+"""
+    validation_response_model = None
+    logger.info("Starting validation agent workflow...")
+    async for _ in validation_runner.run_async(
+        user_id="api_user",
+        session_id="api_session",  # Can use the same session
+        new_message=types.Content(parts=[types.Part(text=validation_input)]),
+    ):
+        # We just need to run the agent to completion to populate the session.
+        pass
+
+    logger.info("Validation agent workflow finished.")
+
+    # After the run, retrieve the final state from the session
+    final_session = await session_service.get_session(
+        app_name="agentic_code_analyzer",
+        user_id="api_user",
+        session_id="api_session",
+    )
+    validation_data = final_session.state.get("validation_output")
+
+    if validation_data and isinstance(validation_data, dict):
+        try:
+            validation_response_model = EvaluationValidationOutput.model_validate(
+                validation_data
+            )
+        except Exception as e:
+            logger.error(f"Pydantic validation failed for validation output: {e}")
+
+    if not validation_response_model:
+        logger.error("Evaluation validation agent did not return a valid output.")
+        raise HTTPException(
+            status_code=500,
+            detail="Evaluation validation failed to produce a result.",
+        )
+
+    return ValidatedAnalysis(
+        analysis=analysis_result, validation=validation_response_model
+    )
 
 
 ALLOWED_DOMAINS = {"github.com", "raw.githubusercontent.com"}
