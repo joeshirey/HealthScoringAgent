@@ -4,7 +4,7 @@ import re
 import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from typing import Optional, Union, Dict, Any
+from typing import Optional, Dict, Any
 from pydantic import BaseModel
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
@@ -101,9 +101,7 @@ class ValidatedAnalysis(BaseModel):
     validation: EvaluationValidationOutput
 
 
-@app.post(
-    "/analyze", response_model=ValidatedAnalysis, summary="Analyze a code sample"
-)
+@app.post("/analyze", response_model=ValidatedAnalysis, summary="Analyze a code sample")
 async def analyze_code(request: CodeRequest):
     """
     Analyzes a code sample and returns a detailed analysis of its health.
@@ -154,9 +152,7 @@ async def analyze_code(request: CodeRequest):
 
     # --- STAGE 2: Run the Evaluation Validation Agent ---
     logger.info("Starting validation of the evaluation...")
-    validation_orchestrator = ValidationOrchestrator(
-        name="validation_orchestrator"
-    )
+    validation_orchestrator = ValidationOrchestrator(name="validation_orchestrator")
     validation_runner = Runner(
         agent=validation_orchestrator,
         app_name="agentic_code_analyzer",

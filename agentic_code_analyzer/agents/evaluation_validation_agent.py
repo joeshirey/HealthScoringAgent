@@ -13,7 +13,10 @@ class EvaluationVerificationAgent(LlmAgent):
 
     def __init__(self, **kwargs):
         prompt_path = os.path.join(
-            os.path.dirname(__file__), "..", "prompts", "evaluation_validation_prompt.md"
+            os.path.dirname(__file__),
+            "..",
+            "prompts",
+            "evaluation_validation_prompt.md",
         )
         with open(prompt_path, "r") as f:
             instruction = f.read()
@@ -33,7 +36,10 @@ class ValidationFormattingAgent(LlmAgent):
 
     def __init__(self, **kwargs):
         prompt_path = os.path.join(
-            os.path.dirname(__file__), "..", "prompts", "validation_formatting_prompt.md"
+            os.path.dirname(__file__),
+            "..",
+            "prompts",
+            "validation_formatting_prompt.md",
         )
         with open(prompt_path, "r") as f:
             instruction = f.read()
