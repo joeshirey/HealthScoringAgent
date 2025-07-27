@@ -36,8 +36,7 @@ async def test_orchestrator_full_run(mock_llm_agents):
     # Define mock side effects for agents to update the session state
     async def mock_initial_analysis_side_effect(ctx):
         ctx.session.state["initial_analysis_output"] = "This is a mock analysis."
-        if False:
-            yield
+        yield MagicMock()
 
     async def mock_json_formatting_side_effect(ctx):
         mock_evaluation_output = {
@@ -58,18 +57,15 @@ async def test_orchestrator_full_run(mock_llm_agents):
             ]
         }
         ctx.session.state["evaluation_review_agent_output"] = json.dumps(mock_evaluation_output)
-        if False:
-            yield
+        yield MagicMock()
 
     async def mock_product_cat_side_effect(ctx):
         ctx.session.state["product_name"] = "Mock Product"
         ctx.session.state["product_category"] = "Mock Category"
-        if False:
-            yield
+        yield MagicMock()
 
     async def mock_code_cleaning_side_effect(ctx):
-        if False:
-            yield
+        yield MagicMock()
 
     mock_code_cleaning.side_effect = mock_code_cleaning_side_effect
     mock_initial_analysis.side_effect = mock_initial_analysis_side_effect
