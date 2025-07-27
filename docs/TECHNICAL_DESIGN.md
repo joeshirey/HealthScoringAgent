@@ -2,7 +2,7 @@
 
 ## 1. Introduction
 
-This document provides a detailed technical overview of the Health Scoring Agent, a multi-agent system for code analysis. It covers the system architecture, the design of the individual agents, the data models used, and the API and UI.
+This document provides a detailed technical overview of the Health Scoring Agent, a multi-agent system for code analysis. It covers the system architecture, the design of the individual agents, the data models used, the prompt engineering strategy, and the API/UI.
 
 ## 2. System Architecture
 
@@ -12,108 +12,137 @@ The main components of the system are:
 
 *   **Orchestrator:** The central component that manages the workflow and coordinates the execution of the other agents.
 *   **Agents:** A collection of specialized agents, each responsible for a specific aspect of the analysis.
+*   **Prompts:** A collection of meticulously engineered prompt templates that are used to guide the large language models.
 *   **Tools:** A set of tools and utilities that are used by the agents to perform their tasks.
-*   **Prompts:** A collection of prompt templates that are used to guide the large language models.
 *   **API:** A FastAPI application that provides a REST API for analyzing code samples.
 *   **UI:** A simple web interface for submitting code samples for analysis.
 
 ```mermaid
 graph TD
-    A[Orchestrator] --> B(Initial Analysis);
-    B --> C(Evaluation);
-    C --> D(Result Processing);
+    A[Orchestrator] --> B(Initial Detection);
+    B --> C(Code Cleaning);
+    C --> D(Product Categorization);
+    D --> E(Evaluation);
+    E --> F(Result Processing);
 ```
 
 ### 2.1. Workflow
 
-The analysis workflow is as follows:
+The analysis workflow is managed by the `CodeAnalyzerOrchestrator` and proceeds as follows:
 
-1.  **Initial Analysis (Parallel):**
-    *   **Language Detection:** Detects the programming language of the code sample.
-    *   **Region Tag Extraction:** Extracts the region tags from the code sample.
-    *   **Product Categorization:** Categorizes the code sample into a specific Google Cloud product.
+1.  **Initial Detection (Parallel):**
+    *   `DeterministicLanguageDetectionAgent`: Detects the programming language of the code sample using deterministic logic.
+    *   `DeterministicRegionTagAgent`: Extracts region tags from the code sample using deterministic logic.
 
-2.  **Evaluation (Sequential):**
-    *   **Initial Analysis:** Performs a detailed analysis of the code, using web grounding to ensure the information is accurate and up-to-date.
-    *   **JSON Formatting:** Formats the analysis into a clean, structured JSON object.
+2.  **Code Cleaning:**
+    *   `CodeCleaningAgent`: Removes comments from the code to focus the analysis on executable logic.
 
-3.  **Result Processing:**
-    *   **Result Processing:** Processes the results of the analysis and generates the final JSON output.
+3.  **Product Categorization:**
+    *   `ProductCategorizationAgent`: Categorizes the code sample into a specific Google Cloud product using a combination of a local search index and an LLM fallback.
+
+4.  **Evaluation (Sequential):**
+    *   `InitialAnalysisAgent`: Performs a detailed, free-form analysis of the code against multiple criteria using a comprehensive prompt.
+    *   `JsonFormattingAgent`: Converts the free-form text analysis from the previous step into a structured JSON object based on a strict schema.
+
+5.  **Result Processing:**
+    *   `ResultProcessingAgent`: Processes the final JSON, enforces the "single penalty" rule to deduplicate recommendations, and combines all data into the final output.
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant UI
     participant API
     participant Orchestrator
-    participant InitialAnalysis
+    participant InitialDetection
+    participant CodeCleaning
+    participant ProductCategory
     participant Evaluation
     participant ResultProcessing
 
-    User->>UI: Enters GitHub link and clicks "Analyze"
-    UI->>API: POST /analyze_github_link
-    API->>Orchestrator: analyze_code(code, github_link)
-    Orchestrator->>InitialAnalysis: run_async()
-    InitialAnalysis-->>Orchestrator: done()
+    User->>API: POST /analyze
+    API->>Orchestrator: analyze_code(code)
+    Orchestrator->>InitialDetection: run_async()
+    InitialDetection-->>Orchestrator: Language & Region Tags
+    Orchestrator->>CodeCleaning: run_async()
+    CodeCleaning-->>Orchestrator: Cleaned Code
+    Orchestrator->>ProductCategory: run_async()
+    ProductCategory-->>Orchestrator: Product Name & Category
     Orchestrator->>Evaluation: run_async()
-    Evaluation-->>Orchestrator: done()
+    Evaluation-->>Orchestrator: Structured JSON Analysis
     Orchestrator->>ResultProcessing: run_async()
-    ResultProcessing-->>Orchestrator: done()
+    ResultProcessing-->>Orchestrator: Final Processed JSON
     Orchestrator-->>API: final_response
-    API-->>UI: 200 OK
-    UI-->>User: Displays results
+    API-->>User: 200 OK
 ```
 
 ## 3. Agent Design
 
-Each agent in the system is a self-contained component with a specific responsibility. The agents are designed to be modular and reusable, and they communicate with each other through a shared session state.
+Each agent is a self-contained component. Communication occurs through a shared session state managed by the orchestrator.
 
 ### 3.1. Orchestrator
 
-The `CodeAnalyzerOrchestrator` is a `SequentialAgent` that manages the overall workflow. It is responsible for creating the other agents and for executing them in the correct order.
+The `CodeAnalyzerOrchestrator` is a `SequentialAgent` that defines the primary workflow.
 
-### 3.2. Initial Analysis Agents
+### 3.2. Initial Agents
 
-The initial analysis agents are run in parallel to improve performance.
-
-*   **`LanguageDetectionAgent`:** An `LlmAgent` that detects the programming language of the code sample. It is recommended to use the Gemini Flash model for this task.
-*   **`RegionTagExtractionAgent`:** An `LlmAgent` that extracts the region tags from the code sample. It is recommended to use the Gemini Flash model for this task.
-*   **`ProductCategorizationAgent`:** A `BaseAgent` that categorizes the code sample into a specific Google Cloud product.
+*   **`DeterministicLanguageDetectionAgent`**: A `BaseAgent` that uses the `pygments` library to identify the language, avoiding an LLM call for a deterministic task.
+*   **`DeterministicRegionTagAgent`**: A `BaseAgent` that uses regular expressions to find region tags, also avoiding an LLM call.
+*   **`CodeCleaningAgent`**: A simple utility agent.
+*   **`ProductCategorizationAgent`**: A `BaseAgent` that uses a sophisticated local search mechanism before falling back to an `LlmAgent` if needed.
 
 ### 3.3. Evaluation Agents
 
-The evaluation agents are run sequentially.
-
-*   **`InitialAnalysisAgent`:** An `LlmAgent` that performs the initial, detailed analysis of the code. It is recommended to use the Gemini Pro model for this task.
-*   **`JsonFormattingAgent`:** An `LlmAgent` that formats the raw text analysis into a JSON object. It is recommended to use the Gemini Flash model for this task.
+*   **`InitialAnalysisAgent`**: An `LlmAgent` that uses the `consolidated_eval.md` and `system_instructions.md` prompts to generate a comprehensive, unstructured review. It is recommended to use the Gemini Pro model for this task for higher quality analysis.
+*   **`JsonFormattingAgent`**: An `LlmAgent` that takes the output of the `InitialAnalysisAgent` and structures it according to the schema in `json_conversion.md`. It is recommended to use the Gemini Flash model for this task, as it is a less complex formatting task.
 
 ### 3.4. Result Processing Agent
 
-The `ResultProcessingAgent` is a `BaseAgent` that processes the results of the analysis and generates the final JSON output.
+The `ResultProcessingAgent` is a `BaseAgent` that performs final data cleaning and aggregation. Its most important function is to enforce the single penalty hierarchy, which prevents redundant recommendations from appearing in the final output.
 
-## 4. Data Models
+## 4. Prompt Engineering
 
-The system uses a set of Pydantic models to define the structured outputs of the analysis agents. These models are defined in the `agentic_code_analyzer/models.py` file.
+The quality of the analysis is highly dependent on the quality of the prompts. This system employs a sophisticated prompt engineering strategy.
 
-### 4.1. `AnalysisOutput`
+*   **Persona-driven Prompts:** Prompts assign a specific, expert persona to the LLM (e.g., "You are a senior DevOps engineer," "You are a principal engineer at a major tech company"). This focuses the LLM on the specific context and requirements of the task.
+*   **Structured Instructions:** Prompts provide clear, detailed, and itemized instructions on what to analyze. For example, instead of asking for "code quality," the prompt specifies checks for formatting, naming conventions, complexity, and language best practices.
+*   **Schema Enforcement:** Prompts that require structured output, such as JSON, include a clear and detailed schema within the prompt itself. This dramatically improves the reliability and consistency of the LLM's output, making it programmatically usable.
 
-This is a base model that provides a standardized structure for the output of the individual analysis agents. It includes the following fields:
+## 5. Data Models
 
-*   `score`: An integer from 1-10.
-*   `summary`: A brief, high-level summary of the findings.
-*   `details`: A list of specific observations, issues, or recommendations.
+The system uses Pydantic models to define the expected structure of the final JSON output. The key model is `EvaluationOutput`, which is enforced by the `JsonFormattingAgent`. Other prompts for sub-agents (like `runnability_prompt.md`) also define their own JSON schemas, which are then consolidated into the final `EvaluationOutput`.
 
-The `CodeQualityOutput`, `ClarityReadabilityOutput`, and `RunnabilityOutput` models all inherit from this base model.
+### 5.1. `EvaluationOutput` Schema
 
-### 4.2. `EvaluationOutput`
+This model, defined in `json_conversion.md`, structures the final analysis.
 
-This model defines the structure of the final output from the evaluation workflow. It includes a detailed breakdown of the analysis, including the overall compliance score, a list of criteria, and a summary of the recommended fixes.
+```json
+{
+  "overall_compliance_score": "integer (0-100)",
+  "criteria_breakdown": [
+    {
+      "criterion_name": "'runnability_and_configuration' | 'api_effectiveness_and_correctness' | ...",
+      "score": "integer (0-100)",
+      "weight": "float",
+      "assessment": "Union[str, RunnabilityChecks, List[ApiCallAnalysis]]",
+      "recommendations_for_llm_fix": ["string"],
+      "generic_problem_categories": ["string"]
+    }
+  ],
+  "llm_fix_summary_for_code_generation": ["string"],
+  "identified_generic_problem_categories": ["string"],
+  "citations": [
+    {
+      "citation_number": "integer",
+      "url": "string"
+    }
+  ]
+}
+```
 
-## 5. API
+## 6. API
 
 The system provides a REST API for analyzing code samples. The API is built using FastAPI and is defined in the `api/main.py` file.
 
-### 5.1. `POST /analyze`
+### 6.1. `POST /analyze`
 
 Analyzes a code sample and returns a detailed analysis of its health.
 
@@ -122,7 +151,7 @@ Analyzes a code sample and returns a detailed analysis of its health.
 *   `code` (string, required): The code sample to analyze.
 *   `github_link` (string, optional): The GitHub link to the code sample.
 
-### 5.2. `POST /analyze_github_link`
+### 6.2. `POST /analyze_github_link`
 
 Analyzes a code sample from a GitHub link and returns a detailed analysis of its health.
 
@@ -130,6 +159,6 @@ Analyzes a code sample from a GitHub link and returns a detailed analysis of its
 
 *   `github_link` (string, required): The GitHub link to the code sample.
 
-## 6. UI
+## 7. UI
 
 The system includes a simple web interface for submitting code samples for analysis. The UI is built using HTML, CSS, and JavaScript and is defined in the `api/ui` directory. The UI allows users to enter a GitHub link to a code sample and view the results of the analysis.

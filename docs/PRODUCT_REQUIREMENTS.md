@@ -17,33 +17,26 @@ The primary goals of the Health Scoring Agent are to:
 
 ### 3.1. Code Analysis
 
-The system shall be able to analyze code samples written in a variety of languages, including:
+The system is designed to be extensible for analyzing code samples in various programming languages. The initial implementation focuses on common languages such as Python and JavaScript.
 
-*   Python
-*   Java
-*   JavaScript
-*   Go
-*   C#
-*   Ruby
-*   PHP
-*   Terraform
-*   Rust
-*   C++
+The system shall evaluate code against the following core criteria:
 
-The system shall evaluate code against the following criteria:
-
-*   **Runnability and Configuration:** The code should be runnable by default, with minimal configuration.
-*   **API Effectiveness and Correctness:** The code should use APIs correctly and effectively.
-*   **Comments and Code Clarity:** The code should be well-commented and easy to understand.
-*   **Formatting and Consistency:** The code should be well-formatted and consistent with the canonical style guide for the language.
-*   **Language Best Practices:** The code should follow idiomatic constructs and avoid anti-patterns.
-*   **LLM Training Fitness and Explicitness:** The code should be explicit, self-documenting, and suitable for training large language models.
+*   **Runnability and Configuration:** Assesses whether the code is runnable by default, with clear dependency management and secure configuration practices.
+*   **API Effectiveness and Correctness:** Evaluates the correct and effective use of APIs, including error handling, security, and best practices.
+*   **Code Quality:** Analyzes formatting, consistency, adherence to language best practices, naming conventions, and code complexity.
 
 ### 3.2. Product Categorization
 
 The system shall be able to categorize code samples into a specific Google Cloud product. The categorization shall be based on a combination of rules-based logic and a large language model.
 
-### 3.3. Output
+### 3.3. Advanced Prompting
+
+The system shall leverage advanced prompt engineering techniques to guide the Large Language Models (LLMs). This includes:
+*   **Persona-driven Prompts:** Assigning specific, expert personas to the LLM for each analysis task (e.g., "Senior DevOps Engineer," "Principal Engineer").
+*   **Structured Instructions:** Providing clear, detailed instructions and checklists for the analysis.
+*   **Schema Enforcement:** Defining a strict JSON schema for the output to ensure consistency and reliability.
+
+### 3.4. Output
 
 The system shall produce a structured JSON object that contains the results of the analysis. The JSON object shall include the following information:
 
