@@ -89,7 +89,7 @@ async def test_orchestrator_full_run(mock_llm_agents):
         "github_link": "http://mock.link",
     }
 
-    session = await session_service.create_session(
+    await session_service.create_session(
         app_name="test_app",
         user_id="test_user",
         session_id="test_session",

@@ -5,9 +5,9 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 from agentic_code_analyzer.orchestrator import CodeAnalyzerOrchestrator
 from dotenv import load_dotenv
- 
+
 load_dotenv()
- 
+
 async def main():
     """Runs the agentic code analyzer."""
     try:
@@ -20,7 +20,7 @@ async def main():
         print("Error: sample.py not found.")
         return
     session_service = InMemorySessionService()
-    session = await session_service.create_session(
+    await session_service.create_session(
         app_name="agentic_code_analyzer",
         user_id="test_user",
         session_id="test_session",
