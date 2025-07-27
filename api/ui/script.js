@@ -27,6 +27,9 @@ analyzeBtn.addEventListener("click", async () => {
         const data = await response.json();
         resultsContainer.innerHTML = ""; // Clear previous results
 
+        const analysis = data.analysis;
+        const validation = data.validation;
+
         // Overall Info
         const overallSection = document.createElement("div");
         overallSection.classList.add("result-section");
@@ -35,43 +38,39 @@ analyzeBtn.addEventListener("click", async () => {
         overallSection.appendChild(overallTitle);
         const overallList = document.createElement("ul");
         overallList.innerHTML = `
-            <li><b>Language:</b> ${data.language}</li>
-            <li><b>Product:</b> ${data.product_name} (${data.product_category})</li>
-            <li><b>Region Tags:</b> ${data.region_tags.join(", ")}</li>
+            <li><b>Language:</b> ${analysis.language}</li>
+            <li><b>Product:</b> ${analysis.product_name} (${analysis.product_category})</li>
+            <li><b>Region Tags:</b> ${analysis.region_tags.join(", ")}</li>
         `;
         overallSection.appendChild(overallList);
         resultsContainer.appendChild(overallSection);
 
-        // Analysis
-        const analysisSection = document.createElement("div");
-        analysisSection.classList.add("result-section");
-        const analysisTitle = document.createElement("h2");
-        analysisTitle.textContent = "Analysis";
-        analysisSection.appendChild(analysisTitle);
-        for (const key in data.analysis) {
-            const subSection = document.createElement("div");
-            subSection.classList.add("sub-section");
-            const subTitle = document.createElement("h3");
-            subTitle.textContent = key.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
-            subSection.appendChild(subTitle);
-            const content = document.createElement("pre");
-            content.textContent = JSON.stringify(data.analysis[key], null, 2);
-            subSection.appendChild(content);
-            analysisSection.appendChild(subSection);
-        }
-        resultsContainer.appendChild(analysisSection);
+        // Validation
+        const validationSection = document.createElement("div");
+        validationSection.classList.add("result-section");
+        const validationTitle = document.createElement("h2");
+        validationTitle.textContent = "Evaluation Validation";
+        validationSection.appendChild(validationTitle);
+        const validationList = document.createElement("ul");
+        validationList.innerHTML = `
+            <li><b>Validation Score:</b> ${validation.validation_score}/10</li>
+            <li><b>Reasoning:</b> ${validation.reasoning}</li>
+        `;
+        validationSection.appendChild(validationList);
+        resultsContainer.appendChild(validationSection);
 
-        // Evaluation
+        // Detailed Evaluation
         const evaluationSection = document.createElement("div");
         evaluationSection.classList.add("result-section");
         const evaluationTitle = document.createElement("h2");
-        evaluationTitle.textContent = "Evaluation";
+        evaluationTitle.textContent = "Detailed Evaluation";
         evaluationSection.appendChild(evaluationTitle);
         const evaluationContent = document.createElement("pre");
-        evaluationContent.textContent = JSON.stringify(data.evaluation, null, 2);
+        evaluationContent.textContent = JSON.stringify(analysis.evaluation, null, 2);
         evaluationSection.appendChild(evaluationContent);
         resultsContainer.appendChild(evaluationSection);
     } catch (error) {
         resultsContainer.textContent = `Error: ${error.message}`;
+        console.error(error);
     }
 });
