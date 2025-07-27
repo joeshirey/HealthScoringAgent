@@ -11,13 +11,14 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 from agentic_code_analyzer.orchestrator import CodeAnalyzerOrchestrator
+from config.logging_config import setup_logging
 from dotenv import load_dotenv
 from urllib.parse import urlparse
 
 load_dotenv()
+setup_logging()
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Get a logger for this module
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
@@ -73,17 +74,8 @@ class GitHubLinkRequest(BaseModel):
 async def analyze_code(request: CodeRequest):
     """
     Analyzes a code sample and returns a detailed analysis of its health.
-
-    This endpoint takes a code sample as input and uses the HealthScoringAgent to
-    perform a comprehensive analysis of its quality, correctness, and adherence to
-    best practices. The analysis is returned as a JSON object.
-
-    Args:
-        request: A `CodeRequest` object containing the code sample to analyze.
-
-    Returns:
-        A JSON object containing the results of the analysis.
     """
+    logger.info(f"Received request to analyze code snippet. Link provided: {bool(request.github_link)}")
     session_service = InMemorySessionService()
     await session_service.create_session(
         app_name="agentic_code_analyzer",
@@ -101,6 +93,7 @@ async def analyze_code(request: CodeRequest):
     )
 
     final_response = "{}"
+    logger.info("Starting agent workflow...")
     async for event in runner.run_async(
         user_id="api_user",
         session_id="api_session",
@@ -108,11 +101,13 @@ async def analyze_code(request: CodeRequest):
     ):
         if event.is_final_response() and event.content and event.content.parts and event.content.parts[0].text:
             final_response = event.content.parts[0].text
+    
+    logger.info("Agent workflow finished.")
 
     try:
         return json.loads(final_response)
     except json.JSONDecodeError:
-        # If the final response is not valid JSON, return an error.
+        logger.error("Failed to parse final response from agent as JSON.")
         raise HTTPException(status_code=500, detail="Failed to parse agent's final response as JSON.")
 
 ALLOWED_DOMAINS = {"github.com", "raw.githubusercontent.com"}
@@ -121,21 +116,12 @@ ALLOWED_DOMAINS = {"github.com", "raw.githubusercontent.com"}
 async def analyze_github_link(request: GitHubLinkRequest):
     """
     Analyzes a code sample from a GitHub link and returns a detailed analysis of its health.
-
-    This endpoint takes a GitHub link as input, fetches the code from the link, and
-    then uses the HealthScoringAgent to perform a comprehensive analysis of its
-    quality, correctness, and adherence to best practices. The analysis is returned
-    as a JSON object.
-
-    Args:
-        request: A `GitHubLinkRequest` object containing the GitHub link to the code sample.
-
-    Returns:
-        A JSON object containing the results of the analysis.
     """
+    logger.info(f"Received request to analyze GitHub link: {request.github_link}")
     try:
         parsed_url = urlparse(request.github_link)
         if parsed_url.hostname not in ALLOWED_DOMAINS:
+            logger.error(f"Invalid GitHub domain: {parsed_url.hostname}")
             raise HTTPException(status_code=400, detail="Invalid GitHub domain.")
 
         raw_url = request.github_link.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
@@ -143,7 +129,9 @@ async def analyze_github_link(request: GitHubLinkRequest):
             response = await client.get(raw_url)
             response.raise_for_status()
             code = response.text
+        logger.info(f"Successfully fetched code from {raw_url}")
     except httpx.HTTPStatusError as e:
+        logger.error(f"Error fetching code from GitHub: {e}")
         raise HTTPException(status_code=400, detail=f"Error fetching code from GitHub: {e}")
 
     return await analyze_code(CodeRequest(code=code, github_link=request.github_link))

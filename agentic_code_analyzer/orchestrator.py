@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import re
 from typing import AsyncGenerator, Dict, Any
@@ -16,6 +17,8 @@ from agentic_code_analyzer.agents.product_categorization_agent import ProductCat
 from agentic_code_analyzer.agents.code_cleaning_agent import CodeCleaningAgent
 from agentic_code_analyzer.agents.analysis.initial_analysis_agent import InitialAnalysisAgent
 from agentic_code_analyzer.agents.analysis.json_formatting_agent import JsonFormattingAgent
+
+logger = logging.getLogger(__name__)
 
 
 class ResultProcessingAgent(BaseAgent):
@@ -119,13 +122,16 @@ class ResultProcessingAgent(BaseAgent):
         Processes the results of the analysis and yields a final event with the
         structured JSON output.
         """
+        logger.info(f"[{self.name}] Starting result processing.")
         try:
             raw_evaluation_output = ctx.session.state.get("evaluation_review_agent_output", "{}")
+            logger.info(f"[{self.name}] Raw evaluation output received.")
 
-            # Safely load the JSON data, which might be a string or already a dict
             processed_output = self._safe_json_load(raw_evaluation_output)
+            logger.info(f"[{self.name}] Safely loaded JSON output.")
 
             deduplicated_evaluation = self._enforce_single_penalty_hierarchy(processed_output)
+            logger.info(f"[{self.name}] Enforced single penalty hierarchy.")
 
             final_output = {
                 "language": ctx.session.state.get("language_detection_agent_output", "Unknown"),
@@ -136,8 +142,10 @@ class ResultProcessingAgent(BaseAgent):
             }
 
             final_json = json.dumps(final_output, indent=2)
+            logger.info(f"[{self.name}] Successfully created final JSON output.")
 
         except Exception as e:
+            logger.error(f"[{self.name}] An unexpected error occurred: {e}", exc_info=True)
             final_json = json.dumps({
                 "error": f"An unexpected error occurred in ResultProcessingAgent: {type(e).__name__} - {str(e)}",
             })

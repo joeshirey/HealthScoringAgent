@@ -1,8 +1,11 @@
+import logging
 from typing import AsyncGenerator
 from google.adk.agents import BaseAgent
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.events import Event
 from agentic_code_analyzer.tools.product_categorization import categorize_sample
+
+logger = logging.getLogger(__name__)
 
 class ProductCategorizationAgent(BaseAgent):
     """
@@ -18,19 +21,8 @@ class ProductCategorizationAgent(BaseAgent):
         """
         Categorizes the code sample and updates the session state with the
         results.
-
-        This method retrieves the code snippet, GitHub link, and region tag from
-        the session state, and then uses the `categorize_sample` tool to
-        categorize the code sample. It then updates the session state with the
-        product category, product name, and a flag indicating whether the LLM
-        was used for categorization.
-
-        Args:
-            ctx: The invocation context for the agent.
-
-        Yields:
-            An empty generator, as this agent does not produce any events.
         """
+        logger.info(f"[{self.name}] Starting product categorization.")
         code_snippet = ctx.session.state.get("code_snippet", "")
         github_link = ctx.session.state.get("github_link", "")
         region_tag = ctx.session.state.get("region_tag_extraction_agent_output", "")
@@ -41,6 +33,8 @@ class ProductCategorizationAgent(BaseAgent):
             region_tag=region_tag,
             llm_fallback=True,
         )
+        
+        logger.info(f"[{self.name}] Categorized as '{product}' in '{category}'. LLM used: {llm_used}.")
 
         ctx.session.state["product_category"] = category
         ctx.session.state["product_name"] = product
