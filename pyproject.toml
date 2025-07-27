@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["ruff"]
+dev = ["ruff", "pytest", "pytest-mock"]
 
 [project.scripts]
 dev = "run_dev:main"
