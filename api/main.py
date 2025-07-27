@@ -92,6 +92,15 @@ class GitHubLinkRequest(BaseModel):
     github_link: str
 
 
+class ValidationRequest(BaseModel):
+    """
+    A request to validate an existing code evaluation.
+    """
+
+    github_link: str
+    evaluation: Dict[str, Any]
+
+
 class ValidatedAnalysis(BaseModel):
     """
     Represents the final, validated analysis output.
@@ -151,45 +160,58 @@ async def analyze_code(request: CodeRequest):
         )
 
     # --- STAGE 2: Run the Evaluation Validation Agent ---
+    validation_response_model = await _run_validation(
+        session_service=session_service,
+        code=request.code,
+        evaluation=analysis_result,
+    )
+
+    return ValidatedAnalysis(
+        analysis=analysis_result, validation=validation_response_model
+    )
+
+
+async def _run_validation(
+    session_service: InMemorySessionService, code: str, evaluation: Dict[str, Any]
+) -> EvaluationValidationOutput:
+    """
+    Runs the validation workflow on a given code sample and its evaluation.
+    """
     logger.info("Starting validation of the evaluation...")
     validation_orchestrator = ValidationOrchestrator(name="validation_orchestrator")
     validation_runner = Runner(
         agent=validation_orchestrator,
         app_name="agentic_code_analyzer",
-        session_service=session_service,  # Can reuse the session service
+        session_service=session_service,
     )
 
     validation_input = f"""
 Original Code:
 ```
-{request.code}
+{code}
 ```
 
 Original Evaluation JSON:
 ```json
-{json.dumps(analysis_result, indent=2)}
+{json.dumps(evaluation, indent=2)}
 ```
 """
-    validation_response_model = None
     logger.info("Starting validation agent workflow...")
     async for _ in validation_runner.run_async(
         user_id="api_user",
-        session_id="api_session",  # Can use the same session
+        session_id="api_session",
         new_message=types.Content(parts=[types.Part(text=validation_input)]),
     ):
-        # We just need to run the agent to completion to populate the session.
-        pass
+        pass  # Run to completion
 
     logger.info("Validation agent workflow finished.")
 
-    # After the run, retrieve the final state from the session
     final_session = await session_service.get_session(
-        app_name="agentic_code_analyzer",
-        user_id="api_user",
-        session_id="api_session",
+        app_name="agentic_code_analyzer", user_id="api_user", session_id="api_session"
     )
     validation_data = final_session.state.get("validation_output")
 
+    validation_response_model = None
     if validation_data and isinstance(validation_data, dict):
         try:
             validation_response_model = EvaluationValidationOutput.model_validate(
@@ -204,10 +226,55 @@ Original Evaluation JSON:
             status_code=500,
             detail="Evaluation validation failed to produce a result.",
         )
+    return validation_response_model
 
-    return ValidatedAnalysis(
-        analysis=analysis_result, validation=validation_response_model
+
+@app.post("/validate", response_model=EvaluationValidationOutput, summary="Validate an existing evaluation")
+async def validate_evaluation(request: ValidationRequest):
+    """
+    Validates an existing evaluation against the source code from a GitHub link.
+    """
+    logger.info(f"Received request to validate evaluation for: {request.github_link}")
+    code = await _fetch_code_from_github(request.github_link)
+
+    session_service = InMemorySessionService()
+    await session_service.create_session(
+        app_name="agentic_code_analyzer",
+        user_id="api_user",
+        session_id="api_session",
+        state={"code_snippet": code, "github_link": request.github_link},
     )
+
+    validation_result = await _run_validation(
+        session_service=session_service, code=code, evaluation=request.evaluation
+    )
+    return validation_result
+
+
+async def _fetch_code_from_github(github_link: str) -> str:
+    """
+    Fetches code from a GitHub link.
+    """
+    try:
+        parsed_url = urlparse(github_link)
+        if parsed_url.hostname not in ALLOWED_DOMAINS:
+            logger.error(f"Invalid GitHub domain: {parsed_url.hostname}")
+            raise HTTPException(status_code=400, detail="Invalid GitHub domain.")
+
+        raw_url = github_link.replace(
+            "github.com", "raw.githubusercontent.com"
+        ).replace("/blob/", "/")
+        async with httpx.AsyncClient() as client:
+            response = await client.get(raw_url)
+            response.raise_for_status()
+            code = response.text
+        logger.info(f"Successfully fetched code from {raw_url}")
+        return code
+    except httpx.HTTPStatusError as e:
+        logger.error(f"Error fetching code from GitHub: {e}")
+        raise HTTPException(
+            status_code=400, detail=f"Error fetching code from GitHub: {e}"
+        )
 
 
 ALLOWED_DOMAINS = {"github.com", "raw.githubusercontent.com"}
@@ -219,26 +286,7 @@ async def analyze_github_link(request: GitHubLinkRequest):
     Analyzes a code sample from a GitHub link and returns a detailed analysis of its health.
     """
     logger.info(f"Received request to analyze GitHub link: {request.github_link}")
-    try:
-        parsed_url = urlparse(request.github_link)
-        if parsed_url.hostname not in ALLOWED_DOMAINS:
-            logger.error(f"Invalid GitHub domain: {parsed_url.hostname}")
-            raise HTTPException(status_code=400, detail="Invalid GitHub domain.")
-
-        raw_url = request.github_link.replace(
-            "github.com", "raw.githubusercontent.com"
-        ).replace("/blob/", "/")
-        async with httpx.AsyncClient() as client:
-            response = await client.get(raw_url)
-            response.raise_for_status()
-            code = response.text
-        logger.info(f"Successfully fetched code from {raw_url}")
-    except httpx.HTTPStatusError as e:
-        logger.error(f"Error fetching code from GitHub: {e}")
-        raise HTTPException(
-            status_code=400, detail=f"Error fetching code from GitHub: {e}"
-        )
-
+    code = await _fetch_code_from_github(request.github_link)
     return await analyze_code(CodeRequest(code=code, github_link=request.github_link))
 
 
