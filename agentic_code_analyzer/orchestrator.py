@@ -10,9 +10,10 @@ from google.adk.events import Event
 from google.genai.types import Content, Part
 
 from agentic_code_analyzer.models import EvaluationOutput
-from agentic_code_analyzer.agents.language_detection_agent import LanguageDetectionAgent
+from agentic_code_analyzer.agents.deterministic_language_detection_agent import DeterministicLanguageDetectionAgent
 from agentic_code_analyzer.agents.deterministic_region_tag_agent import DeterministicRegionTagAgent
 from agentic_code_analyzer.agents.product_categorization_agent import ProductCategorizationAgent
+from agentic_code_analyzer.agents.code_cleaning_agent import CodeCleaningAgent
 from agentic_code_analyzer.agents.analysis.initial_analysis_agent import InitialAnalysisAgent
 from agentic_code_analyzer.agents.analysis.json_formatting_agent import JsonFormattingAgent
 
@@ -159,6 +160,7 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         Initializes the CodeAnalyzerOrchestrator.
         """
         initial_detection_agent = self._create_initial_detection_agent()
+        code_cleaning_agent = CodeCleaningAgent(name="code_cleaning_agent")
         product_categorization_agent = ProductCategorizationAgent(name="product_categorization_agent")
         evaluation_agent = self._create_evaluation_agent()
         result_processor = self._create_result_processing_agent()
@@ -167,6 +169,7 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
             name=kwargs.get("name", "code_analyzer_orchestrator"),
             sub_agents=[
                 initial_detection_agent,
+                code_cleaning_agent,
                 product_categorization_agent,
                 evaluation_agent,
                 result_processor,
@@ -180,7 +183,7 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         return ParallelAgent(
             name="initial_detection",
             sub_agents=[
-                LanguageDetectionAgent(name="language_detection_agent", output_key="language_detection_agent_output", model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-2.5-flash-lite")),
+                DeterministicLanguageDetectionAgent(name="language_detection_agent"),
                 DeterministicRegionTagAgent(name="region_tag_extraction_agent"),
             ],
         )
@@ -200,7 +203,7 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         json_formatting_agent = JsonFormattingAgent(
             name="json_formatting_agent",
             output_key="evaluation_review_agent_output",
-            output_schema=EvaluationOutput,  # This now refers to the new detailed schema
+            output_schema=EvaluationOutput,
             disallow_transfer_to_parent=True,
             disallow_transfer_to_peers=True,
             model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-2.5-flash-lite"),

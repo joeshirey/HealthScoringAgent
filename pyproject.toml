@@ -12,6 +12,7 @@ dependencies = [
     "google-generativeai",
     "demjson3",
     "httpx",
+    "pygments",
 ]
 
 [project.optional-dependencies]
