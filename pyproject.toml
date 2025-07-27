@@ -24,3 +24,8 @@ dev = "run_dev:main"
 [tool.setuptools]
 py-modules = ["run_dev"]
 packages = ["agentic_code_analyzer", "api", "config"]
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]
