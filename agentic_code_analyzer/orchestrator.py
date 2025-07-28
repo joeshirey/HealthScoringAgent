@@ -1,8 +1,16 @@
+"""
+This module defines the main orchestrator for the Health Scoring Agent.
+
+It contains the `CodeAnalyzerOrchestrator`, a sequential agent that coordinates
+the entire code analysis workflow, and the `ResultProcessingAgent`, which
+finalizes the analysis output.
+"""
 import json
 import logging
 import os
 import re
-from typing import AsyncGenerator, Dict, Any
+from typing import AsyncGenerator, Dict, Any, List, Set
+
 import demjson3
 
 from google.adk.agents import BaseAgent, ParallelAgent, SequentialAgent
@@ -33,13 +41,28 @@ logger = logging.getLogger(__name__)
 
 class ResultProcessingAgent(BaseAgent):
     """
-    An agent that processes the results of the analysis, enforces the single
-    penalty rule, and formats them into a structured JSON object.
+    Processes, cleans, and formats the final analysis output.
+
+    This agent takes the raw output from the evaluation workflow, applies
+    business logic such as the "single penalty rule," and combines it with
+    metadata from other agents to produce the final, structured JSON response.
     """
 
-    def _safe_json_load(self, data: Any) -> dict:
+    def _safe_json_load(self, data: Any) -> Dict[str, Any]:
         """
-        Safely loads a JSON string or dictionary, extracting from markdown if necessary.
+        Safely loads a JSON string into a dictionary.
+
+        This method handles cases where the input is already a dictionary, a
+        plain JSON string, or a JSON object embedded in a Markdown code block.
+        It uses a lenient parser (`demjson3`) as a fallback.
+
+        Args:
+            data: The input data, which can be a dict, a JSON string, or a
+                string containing a JSON object in a markdown block.
+
+        Returns:
+            A dictionary representing the loaded JSON, or an empty dictionary
+            if parsing fails.
         """
         if isinstance(data, dict):
             return data
@@ -48,34 +71,47 @@ class ResultProcessingAgent(BaseAgent):
 
         json_string = data
         try:
-            # More flexible regex to find JSON within markdown
+            # Regex to find a JSON object within a markdown code block.
             match = re.search(
                 r"```(json)?\s*({[\s\S]*?})\s*```", json_string, re.IGNORECASE
             )
             if match:
                 json_string = match.group(2)
 
-            # First attempt with standard json library
+            # Attempt to parse with the standard json library first.
             return json.loads(json_string)
         except json.JSONDecodeError:
-            # Fallback to demjson3 for more lenient parsing
+            # If standard parsing fails, fall back to the more lenient demjson3.
             try:
                 decoded = demjson3.decode(json_string)
                 if isinstance(decoded, dict):
                     return decoded
                 return {}
             except demjson3.JSONDecodeError:
+                # If all parsing attempts fail, return an empty dict.
                 return {}
         except AttributeError:
+            # This can happen if the input data is not a string-like object.
             return {}
 
     def _enforce_single_penalty_hierarchy(
         self, evaluation_output: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Enforces the single penalty rule by removing duplicate recommendations
-        based on a predefined hierarchy. This method is designed to be robust
-        against malformed input from the LLM.
+        Enforces the single penalty rule on evaluation criteria.
+
+        This rule ensures that a specific recommendation is only applied once,
+        based on a predefined hierarchy of importance. For example, if a
+        recommendation appears in both "runnability" and "code_clarity", it
+        will only be kept in "runnability" (the higher-priority criterion).
+
+        Args:
+            evaluation_output: The dictionary containing the analysis results,
+                expected to have a 'criteria_breakdown' key.
+
+        Returns:
+            The evaluation output with duplicate recommendations removed
+            according to the hierarchy.
         """
         if (
             not isinstance(evaluation_output, dict)
@@ -87,7 +123,8 @@ class ResultProcessingAgent(BaseAgent):
         if not isinstance(criteria_breakdown, list):
             return evaluation_output
 
-        hierarchy = [
+        # The hierarchy defines the order of importance for criteria.
+        hierarchy: List[str] = [
             "runnability_and_configuration",
             "api_effectiveness_and_correctness",
             "language_best_practices",
@@ -95,37 +132,38 @@ class ResultProcessingAgent(BaseAgent):
             "comments_and_code_clarity",
             "llm_training_fitness_and_explicitness",
         ]
-        penalized_recommendations = set()
+        penalized_recommendations: Set[str] = set()
 
         def get_sort_key(criterion: Any) -> int:
-            """Safely get the sort key for a criterion."""
+            """Provides a sort key based on the hierarchy list."""
             if isinstance(criterion, dict):
                 name = criterion.get("criterion_name")
                 if name in hierarchy:
                     return hierarchy.index(name)
-            return len(hierarchy)
+            return len(hierarchy)  # Place unknown criteria at the end.
 
-        # Filter out non-dict items before sorting
+        # Filter out any malformed (non-dict) items before sorting.
         valid_criteria = [c for c in criteria_breakdown if isinstance(c, dict)]
         sorted_criteria = sorted(valid_criteria, key=get_sort_key)
 
-        processed_criteria = []
+        processed_criteria: List[Dict[str, Any]] = []
         for criterion in sorted_criteria:
             recommendations = criterion.get("recommendations_for_llm_fix")
             if not isinstance(recommendations, list):
-                # If recommendations are not a list, keep the criterion but clear the recommendations
+                # If recommendations are malformed, clear them but keep the criterion.
                 criterion["recommendations_for_llm_fix"] = []
                 processed_criteria.append(criterion)
                 continue
 
-            unique_recommendations = []
+            # Filter out recommendations that have already been penalized.
+            unique_recommendations: List[str] = []
             for rec in recommendations:
-                # Ensure recommendation is hashable, e.g., a string
-                if not isinstance(rec, (str)):
-                    continue
+                if not isinstance(rec, str):
+                    continue  # Ignore malformed recommendations.
                 if rec not in penalized_recommendations:
                     unique_recommendations.append(rec)
                     penalized_recommendations.add(rec)
+
             criterion["recommendations_for_llm_fix"] = unique_recommendations
             processed_criteria.append(criterion)
 
@@ -136,24 +174,37 @@ class ResultProcessingAgent(BaseAgent):
         self, ctx: InvocationContext
     ) -> AsyncGenerator[Event, None]:
         """
-        Processes the results of the analysis and yields a final event with the
-        structured JSON output.
+        Executes the result processing logic.
+
+        This method retrieves the raw evaluation output from the session state,
+        processes it, and yields a final event containing the structured JSON
+        output.
+
+        Args:
+            ctx: The invocation context for the current agent run.
+
+        Yields:
+            A final `Event` containing the complete and formatted JSON analysis.
         """
         logger.info(f"[{self.name}] Starting result processing.")
         try:
+            # Retrieve the raw output from the JSON formatting agent.
             raw_evaluation_output = ctx.session.state.get(
                 "evaluation_review_agent_output", "{}"
             )
-            logger.info(f"[{self.name}] Raw evaluation output received.")
+            logger.debug(f"[{self.name}] Raw evaluation output received.")
 
+            # Safely parse the JSON output.
             processed_output = self._safe_json_load(raw_evaluation_output)
-            logger.info(f"[{self.name}] Safely loaded JSON output.")
+            logger.debug(f"[{self.name}] Safely loaded JSON output.")
 
+            # Apply the single penalty rule to deduplicate recommendations.
             deduplicated_evaluation = self._enforce_single_penalty_hierarchy(
                 processed_output
             )
-            logger.info(f"[{self.name}] Enforced single penalty hierarchy.")
+            logger.debug(f"[{self.name}] Enforced single penalty hierarchy.")
 
+            # Combine all data points into the final output structure.
             final_output = {
                 "language": ctx.session.state.get(
                     "language_detection_agent_output", "Unknown"
@@ -172,15 +223,17 @@ class ResultProcessingAgent(BaseAgent):
             logger.info(f"[{self.name}] Successfully created final JSON output.")
 
         except Exception as e:
+            # In case of any unexpected error, create an error response.
             logger.error(
                 f"[{self.name}] An unexpected error occurred: {e}", exc_info=True
             )
-            final_json = json.dumps(
-                {
-                    "error": f"An unexpected error occurred in ResultProcessingAgent: {type(e).__name__} - {str(e)}",
-                }
+            error_message = (
+                f"An unexpected error occurred in ResultProcessingAgent: "
+                f"{type(e).__name__} - {str(e)}"
             )
+            final_json = json.dumps({"error": error_message})
 
+        # Yield the final result as a turn-complete event.
         yield Event(
             author=self.name,
             content=Content(parts=[Part(text=final_json)]),
@@ -190,14 +243,26 @@ class ResultProcessingAgent(BaseAgent):
 
 class CodeAnalyzerOrchestrator(SequentialAgent):
     """
-    Orchestrates the code analysis workflow using a sequence of parallel and
-    sequential agents.
+    Orchestrates the end-to-end code analysis workflow.
+
+    This agent manages a sequence of sub-agents to perform a comprehensive
+    analysis of a given code snippet. The workflow is as follows:
+    1.  **Initial Detection:** Language and region tags are detected in parallel.
+    2.  **Code Cleaning:** Comments are removed from the code.
+    3.  **Product Categorization:** The relevant product is identified.
+    4.  **Evaluation:** A two-step process involving a detailed analysis
+        followed by JSON formatting.
+    5.  **Result Processing:** The final output is assembled and cleaned.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any):
         """
-        Initializes the CodeAnalyzerOrchestrator.
+        Initializes the CodeAnalyzerOrchestrator and its sub-agents.
+
+        Args:
+            **kwargs: Keyword arguments passed to the parent `SequentialAgent`.
         """
+        # Factory methods are used to construct the sub-agents.
         initial_detection_agent = self._create_initial_detection_agent()
         code_cleaning_agent = CodeCleaningAgent(name="code_cleaning_agent")
         product_categorization_agent = ProductCategorizationAgent(
@@ -206,6 +271,7 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         evaluation_agent = self._create_evaluation_agent()
         result_processor = self._create_result_processing_agent()
 
+        # The orchestrator is a sequential agent that runs each sub-agent in order.
         super().__init__(
             name=kwargs.get("name", "code_analyzer_orchestrator"),
             sub_agents=[
@@ -220,6 +286,12 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
     def _create_initial_detection_agent(self) -> ParallelAgent:
         """
         Creates the parallel agent for the initial detection phase.
+
+        This agent runs language detection and region tag extraction concurrently
+        to save time.
+
+        Returns:
+            A `ParallelAgent` configured for initial detection tasks.
         """
         return ParallelAgent(
             name="initial_detection",
@@ -232,22 +304,31 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
     def _create_evaluation_agent(self) -> SequentialAgent:
         """
         Creates the sequential agent for the two-step evaluation process.
-        It first runs an analysis agent that uses tools to generate a detailed
-        review, then a formatting agent to structure the output into JSON.
+
+        This workflow consists of:
+        1.  `InitialAnalysisAgent`: Performs a detailed, tool-based analysis
+            of the code to generate a raw text review.
+        2.  `JsonFormattingAgent`: Takes the raw review and structures it into a
+            predefined JSON format.
+
+        Returns:
+            A `SequentialAgent` for the core evaluation workflow.
         """
+        # This agent uses a more powerful model for the core analysis.
         initial_analysis_agent = InitialAnalysisAgent(
             name="initial_analysis_agent",
             output_key="initial_analysis_output",
-            model=os.environ.get("GEMINI_PRO_MODEL", "gemini-2.5-pro"),
+            model=os.environ.get("GEMINI_PRO_MODEL", "gemini-1.5-pro-latest"),
         )
 
+        # This agent uses a faster, lighter model for the formatting task.
         json_formatting_agent = JsonFormattingAgent(
             name="json_formatting_agent",
             output_key="evaluation_review_agent_output",
             output_schema=EvaluationOutput,
             disallow_transfer_to_parent=True,
             disallow_transfer_to_peers=True,
-            model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-2.5-flash-lite"),
+            model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-1.5-flash-latest"),
         )
         return SequentialAgent(
             name="evaluation_workflow",
@@ -256,6 +337,9 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
 
     def _create_result_processing_agent(self) -> ResultProcessingAgent:
         """
-        Creates the result processing agent.
+        Creates the agent responsible for final result processing.
+
+        Returns:
+            An instance of `ResultProcessingAgent`.
         """
         return ResultProcessingAgent(name="result_processor")

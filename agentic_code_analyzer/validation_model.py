@@ -1,10 +1,18 @@
+"""
+This module defines the Pydantic data models used in the validation workflow
+and for the final API response.
+"""
+from typing import Any, Dict, List
+
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any
 
 
 class EvaluationValidationOutput(BaseModel):
     """
-    Represents the output of the evaluation validation agent.
+    Represents the structured output of the validation workflow.
+
+    This model contains the score and reasoning produced by the
+    `ValidationOrchestrator`.
     """
 
     validation_score: int = Field(
@@ -15,19 +23,32 @@ class EvaluationValidationOutput(BaseModel):
     )
     reasoning: str = Field(
         ...,
-        description="A detailed explanation of the validation score, highlighting any discrepancies or confirmations found.",
+        description="A detailed explanation for the validation score, highlighting any discrepancies or confirmations found during the fact-checking process.",
     )
 
 
 class ValidationAttempt(BaseModel):
-    """Stores the result of a single validation attempt."""
+    """
+    Stores the result of a single validation attempt in the iterative loop.
+    """
 
-    validation_score: int
-    reasoning: str
+    validation_score: int = Field(
+        ..., description="The validation score for this attempt."
+    )
+    reasoning: str = Field(
+        ..., description="The reasoning provided for this validation score."
+    )
 
 
 class FinalValidatedAnalysisWithHistory(BaseModel):
-    """The final API response, including the analysis and all validation attempts."""
+    """
+    Defines the final structure of the API response for the `/analyze` and
+    `/analyze_github_link` endpoints.
+    """
 
-    analysis: Dict[str, Any]
-    validation_history: List[ValidationAttempt]
+    analysis: Dict[str, Any] = Field(
+        ..., description="The final, validated code analysis object."
+    )
+    validation_history: List[ValidationAttempt] = Field(
+        ..., description="A list of all validation attempts made during the analysis."
+    )

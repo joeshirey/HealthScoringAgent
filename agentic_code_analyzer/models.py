@@ -1,7 +1,14 @@
-from pydantic import BaseModel, Field
+"""
+This module defines the Pydantic data models that structure the output of the
+Health Scoring Agent. These models ensure that the JSON output is consistent,
+well-defined, and easy to parse by downstream consumers.
+"""
 from typing import List, Literal, Union
 
-# Defining specific literals for criterion names to enforce consistency
+from pydantic import BaseModel, Field
+
+# Using a Literal type for criterion names ensures that the output conforms to
+# a predefined set of categories, preventing unexpected or misspelled names.
 CriterionName = Literal[
     "runnability_and_configuration",
     "api_effectiveness_and_correctness",
@@ -11,32 +18,53 @@ CriterionName = Literal[
     "llm_training_fitness_and_explicitness",
 ]
 
+
 # --- Structured Assessment Models ---
+# These models provide detailed, structured information for specific criteria,
+# offering more than just a simple string evaluation.
 
 
 class SyntaxValidity(BaseModel):
-    is_valid: bool
-    reasoning: str
+    """Model for syntax validity checks."""
+
+    is_valid: bool = Field(..., description="Whether the code syntax is valid.")
+    reasoning: str = Field(..., description="Explanation for the validity status.")
 
 
 class DependencyManagement(BaseModel):
-    has_dependencies: bool
-    are_declared: Literal["Yes", "No", "NA"]
-    reasoning: str
+    """Model for dependency management checks."""
+
+    has_dependencies: bool = Field(..., description="Whether the code has external dependencies.")
+    are_declared: Literal["Yes", "No", "NA"] = Field(
+        ..., description="Whether dependencies are declared in a manifest file."
+    )
+    reasoning: str = Field(..., description="Explanation of the dependency management status.")
 
 
 class ConfigurationManagement(BaseModel):
-    uses_env_vars: bool
-    are_documented: Literal["Yes", "No", "NA"]
-    reasoning: str
+    """Model for configuration management checks."""
+
+    uses_env_vars: bool = Field(
+        ..., description="Whether the code uses environment variables for configuration."
+    )
+    are_documented: Literal["Yes", "No", "NA"] = Field(
+        ..., description="Whether the required environment variables are documented."
+    )
+    reasoning: str = Field(..., description="Explanation of the configuration management status.")
 
 
 class HardcodedValues(BaseModel):
-    contains_hardcoded_values: bool
-    details: str
+    """Model for identifying hardcoded, non-trivial values."""
+
+    contains_hardcoded_values: bool = Field(
+        ..., description="Whether the code contains hardcoded values like project IDs or keys."
+    )
+    details: str = Field(..., description="Details about the hardcoded values found.")
 
 
 class RunnabilityChecks(BaseModel):
+    """A composite model for all runnability and configuration checks."""
+
     syntax_validity: SyntaxValidity
     dependency_management: DependencyManagement
     configuration_management: ConfigurationManagement
@@ -44,11 +72,17 @@ class RunnabilityChecks(BaseModel):
 
 
 class ApiEvaluationDetail(BaseModel):
-    status: Literal["Pass", "Fail", "NA"]
-    reasoning: str
+    """Model for the evaluation status of a specific API check."""
+
+    status: Literal["Pass", "Fail", "NA"] = Field(
+        ..., description="The result of the check (Pass, Fail, or Not Applicable)."
+    )
+    reasoning: str = Field(..., description="The reasoning behind the evaluation status.")
 
 
 class ApiCallEvaluation(BaseModel):
+    """A composite model for evaluating a single API call."""
+
     method_existence_check: ApiEvaluationDetail
     parameter_check: ApiEvaluationDetail
     response_handling_check: ApiEvaluationDetail
@@ -56,8 +90,10 @@ class ApiCallEvaluation(BaseModel):
 
 
 class ApiCallAnalysis(BaseModel):
-    method_name: str
-    line_number: int
+    """Model for the analysis of a specific API call found in the code."""
+
+    method_name: str = Field(..., description="The name of the API method being called.")
+    line_number: int = Field(..., description="The line number where the API call is made.")
     evaluation: ApiCallEvaluation
 
 
@@ -65,7 +101,9 @@ class ApiCallAnalysis(BaseModel):
 
 
 class CriteriaBreakdown(BaseModel):
-    """Pydantic model for the criteria breakdown in the final evaluation."""
+    """
+    Represents the detailed evaluation for a single criterion.
+    """
 
     criterion_name: CriterionName = Field(
         ..., description="The name of the criterion being assessed."
@@ -74,49 +112,55 @@ class CriteriaBreakdown(BaseModel):
         ..., ge=0, le=100, description="The score for this criterion, from 0 to 100."
     )
     weight: float = Field(
-        ..., description="The weight of this criterion in the overall score."
+        ..., description="The weight of this criterion in the overall final score."
     )
     evaluation: str = Field(
-        ..., description="A summary of the evaluation for this criterion."
+        ..., description="A high-level summary of the evaluation for this criterion."
     )
     evaluation_details: Union[str, RunnabilityChecks, List[ApiCallAnalysis]] = Field(
         ...,
-        description="The detailed evaluation, which can be a string or a structured object for specific criteria.",
+        description="Detailed evaluation, which can be a simple string or a structured object for specific criteria.",
     )
     recommendations_for_llm_fix: List[str] = Field(
-        default=[], description="Actionable recommendations for an LLM to fix issues."
+        default=[],
+        description="Actionable recommendations for an LLM to automatically fix the identified issues.",
     )
     generic_problem_categories: List[str] = Field(
-        default=[], description="Generic categories of the identified problems."
+        default=[], description="A list of generic categories for the identified problems."
     )
 
 
 class Citation(BaseModel):
-    """Pydantic model for a citation."""
+    """Represents a citation used in the analysis."""
 
-    citation_number: int = Field(..., description="The number of the citation.")
-    url: str = Field(..., description="The URL of the citation.")
+    citation_number: int = Field(..., description="The unique number of the citation.")
+    url: str = Field(..., description="The URL of the cited source material.")
 
 
 class EvaluationOutput(BaseModel):
-    """Pydantic model for the final output of the evaluation workflow."""
+    """
+    The main Pydantic model for the final, structured output of the entire
+    evaluation workflow. This is the object that is ultimately returned to the
+    user.
+    """
 
     overall_compliance_score: int = Field(
         ...,
         ge=0,
         le=100,
-        description="The overall compliance score for the code sample.",
+        description="The final, weighted overall compliance score for the code sample.",
     )
     criteria_breakdown: List[CriteriaBreakdown] = Field(
-        ..., min_length=1, description="A breakdown of the score by criterion."
+        ..., min_length=1, description="A detailed breakdown of the score by each criterion."
     )
     llm_fix_summary_for_code_generation: List[str] = Field(
-        default=[], description="A summary of the fixes an LLM could make."
+        default=[],
+        description="A summary of all recommendations that an LLM could use to fix the code.",
     )
     identified_generic_problem_categories: List[str] = Field(
         default=[],
-        description="The unique generic categories of the identified problems.",
+        description="A unique list of all generic problem categories identified across all criteria.",
     )
     citations: List[Citation] = Field(
-        default=[], description="A list of citations for the analysis."
+        default=[], description="A list of all citations used to support the analysis."
     )
