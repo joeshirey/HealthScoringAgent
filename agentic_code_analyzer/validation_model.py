@@ -1,4 +1,7 @@
 from pydantic import BaseModel, Field
+from typing import List
+
+from agentic_code_analyzer.models import EvaluationOutput
 
 
 class EvaluationValidationOutput(BaseModel):
