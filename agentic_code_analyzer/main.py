@@ -6,6 +6,7 @@ It reads a code snippet from a local file (`sample.py`), initializes the
 output to the console. This script is intended for local testing and development
 purposes.
 """
+
 import asyncio
 import json
 from google.adk.runners import Runner

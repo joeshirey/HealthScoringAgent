@@ -3,6 +3,7 @@ This module provides the logic for categorizing a code sample into a specific
 product and product category. It uses a hybrid approach, combining a fast,
 rule-based method with a more powerful but slower LLM fallback.
 """
+
 import json
 import logging
 import os
@@ -16,7 +17,9 @@ from google.genai import types
 logger = logging.getLogger(__name__)
 
 
-def _load_product_config() -> Tuple[Dict[Tuple[str, str], List[str]], List[Tuple[str, str]]]:
+def _load_product_config() -> Tuple[
+    Dict[Tuple[str, str], List[str]], List[Tuple[str, str]]
+]:
     """
     Loads and merges product hierarchy and keywords from the YAML config.
 

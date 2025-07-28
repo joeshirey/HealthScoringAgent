@@ -2,6 +2,7 @@
 This script provides a convenient way to run the FastAPI application for
 local development.
 """
+
 import uvicorn
 
 

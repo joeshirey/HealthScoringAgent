@@ -2,6 +2,7 @@
 This module defines the `CodeCleaningAgent`, which is responsible for removing
 comments from a code snippet before it is analyzed.
 """
+
 import logging
 import re
 from typing import AsyncGenerator
@@ -89,9 +90,7 @@ class CodeCleaningAgent(BaseAgent):
         language = ctx.session.state.get("language_detection_agent_output", "Unknown")
 
         cleaned_code = self._remove_comments(code_snippet, language)
-        logger.info(
-            f"[{self.name}] Code cleaning complete for language: {language}."
-        )
+        logger.info(f"[{self.name}] Code cleaning complete for language: {language}.")
 
         # Store the cleaned code in the session state.
         ctx.session.state["cleaned_code"] = cleaned_code

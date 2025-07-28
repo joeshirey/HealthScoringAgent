@@ -2,6 +2,7 @@
 This module defines the `ProductCategorizationAgent`, which is responsible for
 identifying the product and product category associated with a code sample.
 """
+
 import logging
 from typing import AsyncGenerator
 

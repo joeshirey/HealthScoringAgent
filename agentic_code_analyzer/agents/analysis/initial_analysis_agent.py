@@ -2,6 +2,7 @@
 This module defines the `InitialAnalysisAgent`, which performs the first-pass,
 detailed analysis of the code snippet.
 """
+
 from typing import Any
 
 from google.adk.agents import LlmAgent

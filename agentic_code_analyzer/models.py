@@ -3,6 +3,7 @@ This module defines the Pydantic data models that structure the output of the
 Health Scoring Agent. These models ensure that the JSON output is consistent,
 well-defined, and easy to parse by downstream consumers.
 """
+
 from typing import List, Literal, Union
 
 from pydantic import BaseModel, Field
@@ -34,30 +35,38 @@ class SyntaxValidity(BaseModel):
 class DependencyManagement(BaseModel):
     """Model for dependency management checks."""
 
-    has_dependencies: bool = Field(..., description="Whether the code has external dependencies.")
+    has_dependencies: bool = Field(
+        ..., description="Whether the code has external dependencies."
+    )
     are_declared: Literal["Yes", "No", "NA"] = Field(
         ..., description="Whether dependencies are declared in a manifest file."
     )
-    reasoning: str = Field(..., description="Explanation of the dependency management status.")
+    reasoning: str = Field(
+        ..., description="Explanation of the dependency management status."
+    )
 
 
 class ConfigurationManagement(BaseModel):
     """Model for configuration management checks."""
 
     uses_env_vars: bool = Field(
-        ..., description="Whether the code uses environment variables for configuration."
+        ...,
+        description="Whether the code uses environment variables for configuration.",
     )
     are_documented: Literal["Yes", "No", "NA"] = Field(
         ..., description="Whether the required environment variables are documented."
     )
-    reasoning: str = Field(..., description="Explanation of the configuration management status.")
+    reasoning: str = Field(
+        ..., description="Explanation of the configuration management status."
+    )
 
 
 class HardcodedValues(BaseModel):
     """Model for identifying hardcoded, non-trivial values."""
 
     contains_hardcoded_values: bool = Field(
-        ..., description="Whether the code contains hardcoded values like project IDs or keys."
+        ...,
+        description="Whether the code contains hardcoded values like project IDs or keys.",
     )
     details: str = Field(..., description="Details about the hardcoded values found.")
 
@@ -77,7 +86,9 @@ class ApiEvaluationDetail(BaseModel):
     status: Literal["Pass", "Fail", "NA"] = Field(
         ..., description="The result of the check (Pass, Fail, or Not Applicable)."
     )
-    reasoning: str = Field(..., description="The reasoning behind the evaluation status.")
+    reasoning: str = Field(
+        ..., description="The reasoning behind the evaluation status."
+    )
 
 
 class ApiCallEvaluation(BaseModel):
@@ -92,8 +103,12 @@ class ApiCallEvaluation(BaseModel):
 class ApiCallAnalysis(BaseModel):
     """Model for the analysis of a specific API call found in the code."""
 
-    method_name: str = Field(..., description="The name of the API method being called.")
-    line_number: int = Field(..., description="The line number where the API call is made.")
+    method_name: str = Field(
+        ..., description="The name of the API method being called."
+    )
+    line_number: int = Field(
+        ..., description="The line number where the API call is made."
+    )
     evaluation: ApiCallEvaluation
 
 
@@ -126,7 +141,8 @@ class CriteriaBreakdown(BaseModel):
         description="Actionable recommendations for an LLM to automatically fix the identified issues.",
     )
     generic_problem_categories: List[str] = Field(
-        default=[], description="A list of generic categories for the identified problems."
+        default=[],
+        description="A list of generic categories for the identified problems.",
     )
 
 
@@ -151,7 +167,9 @@ class EvaluationOutput(BaseModel):
         description="The final, weighted overall compliance score for the code sample.",
     )
     criteria_breakdown: List[CriteriaBreakdown] = Field(
-        ..., min_length=1, description="A detailed breakdown of the score by each criterion."
+        ...,
+        min_length=1,
+        description="A detailed breakdown of the score by each criterion.",
     )
     llm_fix_summary_for_code_generation: List[str] = Field(
         default=[],

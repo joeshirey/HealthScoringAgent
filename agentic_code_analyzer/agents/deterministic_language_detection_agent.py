@@ -2,6 +2,7 @@
 This module defines the `DeterministicLanguageDetectionAgent`, a rule-based
 agent for identifying the programming language of a code snippet.
 """
+
 import logging
 import os
 import re
@@ -149,9 +150,7 @@ class DeterministicLanguageDetectionAgent(BaseAgent):
             for lang, patterns in LANGUAGE_KEYWORDS.items():
                 if any(pattern.search(code_snippet) for pattern in patterns):
                     final_language = lang
-                    logger.info(
-                        f"Language identified as '{lang}' by keyword match."
-                    )
+                    logger.info(f"Language identified as '{lang}' by keyword match.")
                     break  # Stop after the first successful match.
 
         if final_language == "Unknown":

@@ -1,6 +1,7 @@
 """
 This module provides a centralized logging configuration for the application.
 """
+
 import logging
 import sys
 

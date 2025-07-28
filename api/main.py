@@ -3,6 +3,7 @@ This module defines the FastAPI application that serves as the main entry point
 for the Health Scoring Agent. It exposes REST API endpoints for analyzing code,
 validating evaluations, and serving a simple web UI.
 """
+
 import json
 import logging
 import os
@@ -138,7 +139,8 @@ async def analyze_code(request: CodeRequest) -> FinalValidatedAnalysisWithHistor
             current_analysis_json = json.loads(final_response)
         except json.JSONDecodeError:
             raise HTTPException(
-                status_code=500, detail="Failed to parse analysis JSON from the orchestrator."
+                status_code=500,
+                detail="Failed to parse analysis JSON from the orchestrator.",
             )
 
         # --- STAGE 2: Run the Validation Orchestrator ---
@@ -168,11 +170,14 @@ async def analyze_code(request: CodeRequest) -> FinalValidatedAnalysisWithHistor
             )
             feedback_for_next_loop = validation_result.reasoning
             if i == max_loops - 1:
-                logger.warning("Max validation loops reached. Returning final result regardless of score.")
+                logger.warning(
+                    "Max validation loops reached. Returning final result regardless of score."
+                )
 
     if not current_analysis_json:
         raise HTTPException(
-            status_code=500, detail="Analysis failed to produce any result after all attempts."
+            status_code=500,
+            detail="Analysis failed to produce any result after all attempts.",
         )
 
     return FinalValidatedAnalysisWithHistory(
@@ -258,7 +263,9 @@ Original Evaluation JSON:
                 validation_data
             )
         except Exception as e:
-            logger.error(f"Pydantic validation failed for validation output: {e}", exc_info=True)
+            logger.error(
+                f"Pydantic validation failed for validation output: {e}", exc_info=True
+            )
 
     if not validation_response_model:
         logger.error("Evaluation validation agent did not return a valid output.")
@@ -337,7 +344,9 @@ async def _fetch_code_from_github(github_link: str) -> str:
         parsed_url = urlparse(github_link)
         if parsed_url.hostname not in ALLOWED_DOMAINS:
             logger.error(f"Invalid GitHub domain: {parsed_url.hostname}")
-            raise HTTPException(status_code=400, detail="Invalid or unsupported GitHub domain.")
+            raise HTTPException(
+                status_code=400, detail="Invalid or unsupported GitHub domain."
+            )
 
         # Convert the standard GitHub URL to the raw content URL.
         raw_url = github_link.replace(
@@ -353,7 +362,8 @@ async def _fetch_code_from_github(github_link: str) -> str:
     except httpx.HTTPStatusError as e:
         logger.error(f"Error fetching code from GitHub: {e}", exc_info=True)
         raise HTTPException(
-            status_code=400, detail=f"Error fetching code from GitHub: {e.response.text}"
+            status_code=400,
+            detail=f"Error fetching code from GitHub: {e.response.text}",
         )
 
 

@@ -2,6 +2,7 @@
 This module defines the `DeterministicRegionTagAgent`, a rule-based agent for
 extracting region tags from a code snippet.
 """
+
 import logging
 import re
 from typing import AsyncGenerator

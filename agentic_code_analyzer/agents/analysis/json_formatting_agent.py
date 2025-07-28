@@ -3,6 +3,7 @@ This module defines the `JsonFormattingAgent`, which is responsible for
 converting the raw text output of the initial analysis into a structured
 JSON object.
 """
+
 from typing import Any
 
 from google.adk.agents import LlmAgent
