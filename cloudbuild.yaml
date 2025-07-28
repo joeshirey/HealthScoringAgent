@@ -1,0 +1,53 @@
+steps:
+  # 1. Build the Docker image
+  # This step builds the Docker image using the Dockerfile in the current directory.
+  # The image is tagged with the Artifact Registry path, including the project ID, region, repository, image name, and the commit SHA.
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/$_IMAGE_NAME:$COMMIT_SHA'
+      - '.'
+    id: 'Build'
+
+  # 2. Push the Docker image to Artifact Registry
+  # This step pushes the built image to the specified Artifact Registry repository.
+  # The `images` field implicitly tells Cloud Build to push the image after the build step is complete.
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/$_IMAGE_NAME:$COMMIT_SHA'
+    id: 'Push'
+
+  # 3. Deploy to Cloud Run
+  # This step deploys the image from Artifact Registry to Cloud Run.
+  # It uses the gcloud builder to execute the `gcloud run deploy` command.
+  - name: 'gcr.io/google-cloud-sdk/gcloud'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - '$_SERVICE_NAME'
+      - '--image'
+      - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/$_IMAGE_NAME:$COMMIT_SHA'
+      - '--region'
+      - '$_REGION'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+    id: 'Deploy'
+
+# Define the images to be pushed to Artifact Registry after a successful build.
+images:
+  - '$_REGION-docker.pkg.dev/$PROJECT_ID/$_REPOSITORY/$_IMAGE_NAME:$COMMIT_SHA'
+
+# Define user-substitutable variables.
+# These can be overridden at build time.
+substitutions:
+  _REGION: 'us-central1'
+  _REPOSITORY: 'health-scoring-agent-repo'
+  _IMAGE_NAME: 'health-scoring-agent'
+  _SERVICE_NAME: 'health-scoring-agent'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
