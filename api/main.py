@@ -98,6 +98,15 @@ class GitHubLinkRequest(BaseModel):
     github_link: str
 
 
+class ValidationRequest(BaseModel):
+    """
+    A request to validate an existing code evaluation.
+    """
+
+    github_link: str
+    evaluation: Dict[str, Any]
+
+
 @app.post(
     "/analyze",
     response_model=FinalValidatedAnalysisWithHistory,
