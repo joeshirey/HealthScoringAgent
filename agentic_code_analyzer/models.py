@@ -76,9 +76,12 @@ class CriteriaBreakdown(BaseModel):
     weight: float = Field(
         ..., description="The weight of this criterion in the overall score."
     )
-    assessment: Union[str, RunnabilityChecks, List[ApiCallAnalysis]] = Field(
+    evaluation: str = Field(
+        ..., description="A summary of the evaluation for this criterion."
+    )
+    evaluation_details: Union[str, RunnabilityChecks, List[ApiCallAnalysis]] = Field(
         ...,
-        description="The detailed assessment, which can be a string or a structured object for specific criteria.",
+        description="The detailed evaluation, which can be a string or a structured object for specific criteria.",
     )
     recommendations_for_llm_fix: List[str] = Field(
         default=[], description="Actionable recommendations for an LLM to fix issues."
