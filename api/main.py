@@ -5,7 +5,7 @@ import os
 import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from typing import Optional, Union, Dict, Any
+from typing import Optional, Dict, Any
 from pydantic import BaseModel
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
@@ -19,7 +19,6 @@ from agentic_code_analyzer.validation_model import (
     ValidationAttempt,
     FinalValidatedAnalysisWithHistory,
 )
-from agentic_code_analyzer.models import EvaluationOutput
 from config.logging_config import setup_logging
 from dotenv import load_dotenv
 from urllib.parse import urlparse
@@ -165,7 +164,9 @@ async def analyze_code(request: CodeRequest):
         try:
             current_analysis_json = json.loads(final_response)
         except json.JSONDecodeError:
-            raise HTTPException(status_code=500, detail="Failed to parse analysis JSON.")
+            raise HTTPException(
+                status_code=500, detail="Failed to parse analysis JSON."
+            )
 
         # --- STAGE 2: Run the Validation Orchestrator ---
         validation_result = await _run_validation(
@@ -218,7 +219,9 @@ async def analyze_code(request: CodeRequest):
         app_name="agentic_code_analyzer", user_id="api_user", session_id=session_id
     )
     full_analysis_object = {
-        "language": final_session.state.get("language_detection_agent_output", "Unknown"),
+        "language": final_session.state.get(
+            "language_detection_agent_output", "Unknown"
+        ),
         "product_name": final_session.state.get("product_name", "Unknown"),
         "product_category": final_session.state.get("product_category", "Unknown"),
         "region_tags": final_session.state.get(

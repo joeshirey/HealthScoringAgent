@@ -15,7 +15,7 @@ class EvaluationValidationOutput(BaseModel):
     )
     reasoning: str = Field(
         ...,
-        description="A detailed explanation of the validation score, highlighting any discrepancies or confirmations found."
+        description="A detailed explanation of the validation score, highlighting any discrepancies or confirmations found.",
     )
 
 
