@@ -218,6 +218,9 @@ async def analyze_code(request: CodeRequest):
     final_session = await session_service.get_session(
         app_name="agentic_code_analyzer", user_id="api_user", session_id=session_id
     )
+    if not final_session:
+        raise HTTPException(status_code=500, detail="Failed to retrieve final session.")
+
     full_analysis_object = {
         "language": final_session.state.get(
             "language_detection_agent_output", "Unknown"
@@ -280,6 +283,9 @@ Original Evaluation JSON:
     final_session = await session_service.get_session(
         app_name="agentic_code_analyzer", user_id="api_user", session_id=session_id
     )
+    if not final_session:
+        raise HTTPException(status_code=500, detail="Failed to retrieve session during validation.")
+
     validation_data = final_session.state.get("validation_output")
 
     validation_response_model = None

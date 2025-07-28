@@ -43,7 +43,12 @@ async def main():
         session_id="test_session",
         new_message=types.Content(parts=[types.Part(text=code_snippet)]),
     ):
-        if event.is_final_response():
+        if (
+            event.is_final_response()
+            and event.content
+            and event.content.parts
+            and event.content.parts[0].text
+        ):
             final_response = event.content.parts[0].text
 
     print(json.dumps(json.loads(final_response), indent=4))

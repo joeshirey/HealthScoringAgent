@@ -123,7 +123,12 @@ async def test_orchestrator_full_run(mock_llm_agents):
         session_id="test_session",
         new_message=Content(parts=[Part(text=code_snippet)]),
     ):
-        if event.is_final_response():
+        if (
+            event.is_final_response()
+            and event.content
+            and event.content.parts
+            and event.content.parts[0].text
+        ):
             final_response = event.content.parts[0].text
 
     # 3. Assertions

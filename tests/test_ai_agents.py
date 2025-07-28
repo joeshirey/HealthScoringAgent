@@ -3,7 +3,8 @@ import json
 
 from google.adk.events import Event
 from google.adk.sessions import InMemorySessionService
-from google.adk.agents.invocation_context import InvocationContext, RunConfig
+from google.adk.agents.invocation_context import InvocationContext
+from google.adk.agents.run_config import RunConfig
 from google.genai.types import Content, Part
 
 from agentic_code_analyzer.agents.analysis.json_formatting_agent import (
