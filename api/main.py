@@ -284,7 +284,9 @@ Original Evaluation JSON:
         app_name="agentic_code_analyzer", user_id="api_user", session_id=session_id
     )
     if not final_session:
-        raise HTTPException(status_code=500, detail="Failed to retrieve session during validation.")
+        raise HTTPException(
+            status_code=500, detail="Failed to retrieve session during validation."
+        )
 
     validation_data = final_session.state.get("validation_output")
 
