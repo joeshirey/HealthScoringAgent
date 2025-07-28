@@ -201,8 +201,19 @@ async def analyze_code(request: CodeRequest):
             status_code=500, detail="Analysis failed to produce any result."
         )
 
+    # Extract the nested evaluation object for validation
+    evaluation_data = current_analysis_json.get("evaluation")
+    if not evaluation_data or not isinstance(evaluation_data, dict):
+        logger.error(
+            f"Final analysis JSON is missing or has a malformed 'evaluation' key. Found: {current_analysis_json}"
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Final analysis JSON is missing the 'evaluation' key.",
+        )
+
     return FinalValidatedAnalysisWithHistory(
-        analysis=EvaluationOutput.model_validate(current_analysis_json),
+        analysis=EvaluationOutput.model_validate(evaluation_data),
         validation_history=validation_history,
     )
 
