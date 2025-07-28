@@ -70,24 +70,22 @@ sequenceDiagram
 
     User->>API Layer: POST /analyze
     
-    loop Iterative Analysis & Validation (configurable, e.g., max 3 times)
+    loop Max 3 Iterations
         API Layer->>CodeAnalyzerOrchestrator: run_async(code, feedback?)
         CodeAnalyzerOrchestrator-->>API Layer: Returns Analysis JSON
         
         API Layer->>ValidationOrchestrator: run_async(code, analysis)
         ValidationOrchestrator-->>API Layer: Returns Validation JSON {score, reasoning}
         
-        alt Validation Score is Acceptable (> 7)
-            API Layer-->>User: 200 OK with Final Analysis & Validation History
+        alt score > 7
+            API Layer->>API Layer: Validation Succeeded
             break
-        else
-            API Layer->>API Layer: Prepare 'reasoning' as 'feedback' for next iteration
+        else score <= 7
+            API Layer->>API Layer: Validation Failed, Prepare feedback for next loop
         end
     end
     
-    opt Max iterations reached
-         API Layer-->>User: 200 OK with Last Analysis & Full Validation History
-    end
+    API Layer-->>User: 200 OK with Final Analysis & History
 ```
 
 ## 3. Agent Design
