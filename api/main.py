@@ -229,7 +229,11 @@ Original Evaluation JSON:
     return validation_response_model
 
 
-@app.post("/validate", response_model=EvaluationValidationOutput, summary="Validate an existing evaluation")
+@app.post(
+    "/validate",
+    response_model=EvaluationValidationOutput,
+    summary="Validate an existing evaluation",
+)
 async def validate_evaluation(request: ValidationRequest):
     """
     Validates an existing evaluation against the source code from a GitHub link.
