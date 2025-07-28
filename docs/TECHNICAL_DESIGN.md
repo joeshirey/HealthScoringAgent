@@ -59,28 +59,34 @@ The analysis workflow is managed by the `CodeAnalyzerOrchestrator` and proceeds 
 5.  **Result Processing:**
     *   `ResultProcessingAgent`: Processes the final JSON, enforces the "single penalty" rule to deduplicate recommendations, and combines all data into the final output.
 
-6.  **Validation (API-Triggered, Sequential):**
+6.  **Iterative Validation and Refinement (API Layer):**
     *   After the primary analysis is complete, the API layer triggers the `ValidationOrchestrator`.
     *   `EvaluationVerificationAgent`: This agent takes the original code and the completed analysis as input. It uses the `google_search` tool to verify the specific claims made in the analysis, particularly around API usage. It outputs a raw, unstructured text summary of its findings.
     *   `ValidationFormattingAgent`: This agent takes the raw text from the verification agent and converts it into a structured JSON object containing a validation score (1-10) and detailed reasoning, based on the `EvaluationValidationOutput` schema.
+    *   **Iterative Loop:** If the `validation_score` is below a configurable threshold (default is 7), the API layer will re-invoke the `CodeAnalyzerOrchestrator`. The reasoning from the validation is passed as feedback to the `InitialAnalysisAgent`, which incorporates it into its next analysis attempt. This loop continues until the validation score meets the threshold or a maximum number of iterations (default is 3) is reached.
 
 ```mermaid
 sequenceDiagram
-    participant User
-    participant API
     participant User
     participant API
     participant CodeAnalyzerOrchestrator
     participant ValidationOrchestrator
 
     User->>API: POST /analyze
-    API->>CodeAnalyzerOrchestrator: analyze_code(code)
-    CodeAnalyzerOrchestrator-->>API: Analysis JSON
+    loop Validation Loop (max 3 iterations)
+        API->>CodeAnalyzerOrchestrator: analyze_code(code, feedback?)
+        CodeAnalyzerOrchestrator-->>API: Analysis JSON
 
-    API->>ValidationOrchestrator: validate_analysis(code, analysis_json)
-    ValidationOrchestrator-->>API: Validation JSON
+        API->>ValidationOrchestrator: validate_analysis(code, analysis_json)
+        ValidationOrchestrator-->>API: Validation JSON
 
-    API-->>User: 200 OK (Combined Result)
+        alt Validation Score > 7
+            API-->>User: 200 OK (Combined Result)
+            break
+        else
+            API->>API: Prepare feedback for next loop
+        end
+    end
 ```
 
 ## 3. Agent Design
@@ -177,10 +183,10 @@ Analyzes a code sample and returns a detailed analysis of its health.
 *   `code` (string, required): The code sample to analyze.
 *   `github_link` (string, optional): The GitHub link to the code sample.
 
-**Response Body (`ValidatedAnalysis`):**
+**Response Body (`FinalValidatedAnalysisWithHistory`):**
 
-*   `analysis`: The full JSON object from the primary analysis workflow.
-*   `validation`: A JSON object containing the `validation_score` and `reasoning` from the validation workflow.
+*   `analysis`: The full JSON object from the final iteration of the primary analysis workflow.
+*   `validation_history`: A list of JSON objects, each containing the `validation_score` and `reasoning` from each validation attempt.
 
 ### 6.2. `POST /analyze_github_link`
 
@@ -189,6 +195,20 @@ Analyzes a code sample from a GitHub link and returns a detailed analysis of its
 **Request Body:**
 
 *   `github_link` (string, required): The GitHub link to the code sample.
+
+### 6.3. `POST /validate`
+
+Performs a standalone validation of an existing evaluation.
+
+**Request Body (`ValidationRequest`):**
+
+*   `github_link` (string, required): The GitHub link to the original code sample.
+*   `evaluation` (object, required): The JSON object from a previous analysis that you want to validate.
+
+**Response Body (`EvaluationValidationOutput`):**
+
+*   `validation_score`: An integer from 1-10.
+*   `reasoning`: A string explaining the score.
 
 ## 7. UI
 

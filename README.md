@@ -27,6 +27,7 @@ The Health Scoring Agent is a sophisticated, multi-agent system designed to anal
 - **Code Cleaning:** The system includes a utility to remove comments from the code before analysis. This ensures that the analysis is focused on the executable code and is not influenced by comments.
 - **Web Interface:** The project includes a simple web interface for submitting code samples for analysis. The interface provides a user-friendly way to interact with the system and view the results of the analysis.
 - **Self-Validation Workflow:** Includes a secondary, independent agentic workflow designed to validate the output of the primary analysis. This "peer review" model uses Google Search to verify the claims made by the initial evaluation, adding a robust layer of quality control and increasing the reliability of the final score.
+- **Iterative Refinement:** The system can be configured to re-run the analysis if the validation score is below a certain threshold. This allows the system to iteratively refine its analysis based on the feedback from the validation agent, leading to a more accurate and reliable final result.
 
 ## 🏗️ System Architecture
 
@@ -39,9 +40,10 @@ The `CodeAnalyzerOrchestrator` is the heart of the system. It is responsible for
 1.  **Initial Analysis:** In this phase, a parallel agent is used to perform a set of initial analysis tasks, including language detection and region tag extraction.
 2.  **Evaluation:** In this phase, a sequential agent is used to perform a two-step evaluation of the code. The first step uses an `InitialAnalysisAgent` to perform a detailed analysis of the code, and the second step uses a `JsonFormattingAgent` to format the analysis into a structured JSON object.
 3.  **Result Processing:** In this phase, a `ResultProcessingAgent` is used to process the results of the analysis, enforce the single penalty rule, and format the final output.
-4.  **Evaluation Validation (API Layer):** After the primary analysis is complete, the API triggers a secondary, independent `ValidationOrchestrator`. This orchestrator also uses a two-step process:
+4.  **Iterative Validation and Refinement (API Layer):** After the primary analysis is complete, the API triggers a secondary, independent `ValidationOrchestrator`. This orchestrator also uses a two-step process:
     *   An `EvaluationVerificationAgent` uses the `google_search` tool to verify the claims made in the original evaluation, focusing on API correctness. It produces a raw text analysis of its findings.
     *   A `ValidationFormattingAgent` takes this raw text and structures it into a final validation score and reasoning.
+    *   If the validation score is below a configurable threshold (default is 7), the API will re-run the entire analysis, passing the reasoning from the validation agent as feedback to the `CodeAnalyzerOrchestrator`. This loop continues until the validation score is acceptable or a maximum number of loops is reached.
 
 ### Agents
 
@@ -123,10 +125,10 @@ Analyzes a code sample and returns a detailed analysis of its health.
 
 **Response Body:**
 
-A JSON object containing the detailed analysis and a validation score for the analysis itself.
+A JSON object containing the detailed analysis and a history of the validation attempts.
 
-- `analysis`: The full, detailed health score analysis from the primary agent workflow.
-- `validation`: An object containing:
+- `analysis`: The full, detailed health score analysis from the final iteration of the agent workflow.
+- `validation_history`: A list of objects, where each object represents a validation attempt and contains:
   - `validation_score`: A score from 1-10 on the quality of the analysis.
   - `reasoning`: A detailed explanation for the validation score.
 
@@ -158,7 +160,36 @@ curl -X POST http://0.0.0.0:8090/analyze_github_link \
 }'
 ```
 
+### `POST /validate`
+
+Validates an existing evaluation against the source code from a GitHub link.
+
+**Request Body:**
+
+- `github_link` (string, required): The GitHub link to the code sample.
+- `evaluation` (object, required): The JSON object from a previous analysis.
+
+**Response Body:**
+
+A JSON object containing the validation score and reasoning.
+
+- `validation_score`: A score from 1-10 on the quality of the analysis.
+- `reasoning`: A detailed explanation for the validation score.
+
+**Example:**
+
+```bash
+curl -X POST http://0.0.0.0:8090/validate \
+-H "Content-Type: application/json" \
+-d '{
+    "github_link": "https://github.com/googleapis/google-cloud-node/blob/main/packages/google-cloud-alloydb/samples/quickstart.js",
+    "evaluation": { ... }
+}'
+```
+
 ## 📁 Project Structure
+
+```
 
 The project is organized into the following directories:
 
