@@ -14,5 +14,19 @@ class EvaluationValidationOutput(BaseModel):
     )
     reasoning: str = Field(
         ...,
-        description="A detailed explanation of the validation score, highlighting any discrepancies or confirmations found.",
+        description="A detailed explanation of the validation score, highlighting any discrepancies or confirmations found."
     )
+
+
+class ValidationAttempt(BaseModel):
+    """Stores the result of a single validation attempt."""
+
+    validation_score: int
+    reasoning: str
+
+
+class FinalValidatedAnalysisWithHistory(BaseModel):
+    """The final API response, including the analysis and all validation attempts."""
+
+    analysis: EvaluationOutput
+    validation_history: List[ValidationAttempt]

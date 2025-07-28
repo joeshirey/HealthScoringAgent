@@ -1,10 +1,11 @@
 import json
 import logging
 import re
+import os
 import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from typing import Optional, Dict, Any
+from typing import Optional, Union, Dict, Any
 from pydantic import BaseModel
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
@@ -13,7 +14,12 @@ from agentic_code_analyzer.orchestrator import CodeAnalyzerOrchestrator
 from agentic_code_analyzer.agents.evaluation_validation_agent import (
     ValidationOrchestrator,
 )
-from agentic_code_analyzer.validation_model import EvaluationValidationOutput
+from agentic_code_analyzer.validation_model import (
+    EvaluationValidationOutput,
+    ValidationAttempt,
+    FinalValidatedAnalysisWithHistory,
+)
+from agentic_code_analyzer.models import EvaluationOutput
 from config.logging_config import setup_logging
 from dotenv import load_dotenv
 from urllib.parse import urlparse
@@ -92,93 +98,120 @@ class GitHubLinkRequest(BaseModel):
     github_link: str
 
 
-class ValidationRequest(BaseModel):
-    """
-    A request to validate an existing code evaluation.
-    """
-
-    github_link: str
-    evaluation: Dict[str, Any]
-
-
-class ValidatedAnalysis(BaseModel):
-    """
-    Represents the final, validated analysis output.
-    """
-
-    analysis: Dict[str, Any]
-    validation: EvaluationValidationOutput
-
-
-@app.post("/analyze", response_model=ValidatedAnalysis, summary="Analyze a code sample")
+@app.post(
+    "/analyze",
+    response_model=FinalValidatedAnalysisWithHistory,
+    summary="Analyze a code sample",
+)
 async def analyze_code(request: CodeRequest):
     """
-    Analyzes a code sample and returns a detailed analysis of its health.
+    Analyzes a code sample, validates the analysis, and iteratively
+    re-evaluates if the validation score is below a threshold.
     """
-    logger.info(
-        f"Received request to analyze code snippet. Link provided: {bool(request.github_link)}"
-    )
+    max_loops = int(os.environ.get("MAX_VALIDATION_LOOPS", 3))
+    validation_history = []
+    current_analysis_json = {}
+    feedback_for_next_loop = ""
     session_service = InMemorySessionService()
-    await session_service.create_session(
-        app_name="agentic_code_analyzer",
-        user_id="api_user",
-        session_id="api_session",
-        state={
+    session_id = "iterative_session"
+
+    for i in range(max_loops):
+        logger.info(f"--- Starting Analysis Iteration {i + 1}/{max_loops} ---")
+
+        # --- STAGE 1: Run the main Code Analyzer ---
+        analysis_orchestrator = CodeAnalyzerOrchestrator(
+            name=f"code_analyzer_orchestrator_iter_{i}"
+        )
+        initial_state = {
             "code_snippet": request.code,
             "github_link": request.github_link or "",
-        },
-    )
-    runner = Runner(
-        agent=CodeAnalyzerOrchestrator(name="code_analyzer_orchestrator"),
-        app_name="agentic_code_analyzer",
-        session_service=session_service,
-    )
-
-    final_response = "{}"
-    logger.info("Starting agent workflow...")
-    async for event in runner.run_async(
-        user_id="api_user",
-        session_id="api_session",
-        new_message=types.Content(parts=[types.Part(text=request.code)]),
-    ):
-        if (
-            event.is_final_response()
-            and event.content
-            and event.content.parts
-            and event.content.parts[0].text
-        ):
-            final_response = event.content.parts[0].text
-
-    logger.info("Agent workflow finished.")
-
-    try:
-        analysis_result = json.loads(final_response)
-    except json.JSONDecodeError:
-        logger.error("Failed to parse final analysis from agent as JSON.")
-        raise HTTPException(
-            status_code=500, detail="Failed to parse agent's final analysis as JSON."
+            "feedback_from_validation": feedback_for_next_loop,
+        }
+        await session_service.create_session(
+            app_name="agentic_code_analyzer",
+            user_id="api_user",
+            session_id=session_id,
+            state=initial_state,
+        )
+        analysis_runner = Runner(
+            agent=analysis_orchestrator,
+            app_name="agentic_code_analyzer",
+            session_service=session_service,
         )
 
-    # --- STAGE 2: Run the Evaluation Validation Agent ---
-    validation_response_model = await _run_validation(
-        session_service=session_service,
-        code=request.code,
-        evaluation=analysis_result,
-    )
+        final_response = "{}"
+        async for event in analysis_runner.run_async(
+            user_id="api_user",
+            session_id=session_id,
+            new_message=types.Content(parts=[types.Part(text=request.code)]),
+        ):
+            if (
+                event.is_final_response()
+                and event.content
+                and event.content.parts
+                and event.content.parts[0].text
+            ):
+                final_response = event.content.parts[0].text
 
-    return ValidatedAnalysis(
-        analysis=analysis_result, validation=validation_response_model
+        try:
+            current_analysis_json = json.loads(final_response)
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=500, detail="Failed to parse analysis JSON.")
+
+        # --- STAGE 2: Run the Validation Orchestrator ---
+        validation_result = await _run_validation(
+            session_service=session_service,
+            session_id=session_id,
+            code=request.code,
+            evaluation=current_analysis_json,
+            iteration=i,
+        )
+        validation_history.append(
+            ValidationAttempt(
+                validation_score=validation_result.validation_score,
+                reasoning=validation_result.reasoning,
+            )
+        )
+
+        # --- STAGE 3: Check the condition ---
+        if validation_result.validation_score > 7:
+            logger.info(
+                f"Validation passed with score {validation_result.validation_score}. Exiting loop."
+            )
+            break
+        else:
+            logger.warning(
+                f"Validation failed with score {validation_result.validation_score}. Preparing for re-evaluation."
+            )
+            feedback_for_next_loop = validation_result.reasoning
+            if i == max_loops - 1:
+                logger.warning("Max validation loops reached. Returning final result.")
+
+    if not current_analysis_json:
+        raise HTTPException(
+            status_code=500, detail="Analysis failed to produce any result."
+        )
+
+    return FinalValidatedAnalysisWithHistory(
+        analysis=EvaluationOutput.model_validate(current_analysis_json),
+        validation_history=validation_history,
     )
 
 
 async def _run_validation(
-    session_service: InMemorySessionService, code: str, evaluation: Dict[str, Any]
+    session_service: InMemorySessionService,
+    session_id: str,
+    code: str,
+    evaluation: Dict[str, Any],
+    iteration: int,
 ) -> EvaluationValidationOutput:
     """
     Runs the validation workflow on a given code sample and its evaluation.
     """
-    logger.info("Starting validation of the evaluation...")
-    validation_orchestrator = ValidationOrchestrator(name="validation_orchestrator")
+    logger.info(f"Starting validation of the evaluation (Iteration {iteration + 1})...")
+    validation_orchestrator = ValidationOrchestrator(
+        name=f"validation_orchestrator_iter_{iteration}"
+    )
     validation_runner = Runner(
         agent=validation_orchestrator,
         app_name="agentic_code_analyzer",
@@ -199,7 +232,7 @@ Original Evaluation JSON:
     logger.info("Starting validation agent workflow...")
     async for _ in validation_runner.run_async(
         user_id="api_user",
-        session_id="api_session",
+        session_id=session_id,
         new_message=types.Content(parts=[types.Part(text=validation_input)]),
     ):
         pass  # Run to completion
@@ -207,7 +240,7 @@ Original Evaluation JSON:
     logger.info("Validation agent workflow finished.")
 
     final_session = await session_service.get_session(
-        app_name="agentic_code_analyzer", user_id="api_user", session_id="api_session"
+        app_name="agentic_code_analyzer", user_id="api_user", session_id=session_id
     )
     validation_data = final_session.state.get("validation_output")
 
@@ -229,6 +262,8 @@ Original Evaluation JSON:
     return validation_response_model
 
 
+# This standalone endpoint can be removed or kept depending on use case.
+# For now, we will keep it but ensure it uses a unique session_id.
 @app.post(
     "/validate",
     response_model=EvaluationValidationOutput,
@@ -242,15 +277,20 @@ async def validate_evaluation(request: ValidationRequest):
     code = await _fetch_code_from_github(request.github_link)
 
     session_service = InMemorySessionService()
+    session_id = "standalone_validation_session"
     await session_service.create_session(
         app_name="agentic_code_analyzer",
         user_id="api_user",
-        session_id="api_session",
+        session_id=session_id,
         state={"code_snippet": code, "github_link": request.github_link},
     )
 
     validation_result = await _run_validation(
-        session_service=session_service, code=code, evaluation=request.evaluation
+        session_service=session_service,
+        session_id=session_id,
+        code=code,
+        evaluation=request.evaluation,
+        iteration=0,
     )
     return validation_result
 
@@ -284,7 +324,11 @@ async def _fetch_code_from_github(github_link: str) -> str:
 ALLOWED_DOMAINS = {"github.com", "raw.githubusercontent.com"}
 
 
-@app.post("/analyze_github_link", summary="Analyze a code sample from a GitHub link")
+@app.post(
+    "/analyze_github_link",
+    response_model=FinalValidatedAnalysisWithHistory,
+    summary="Analyze a code sample from a GitHub link",
+)
 async def analyze_github_link(request: GitHubLinkRequest):
     """
     Analyzes a code sample from a GitHub link and returns a detailed analysis of its health.
