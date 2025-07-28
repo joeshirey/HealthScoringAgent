@@ -40,52 +40,53 @@ graph TD
 
 ### 2.1. Workflow
 
-The analysis workflow is managed by the `CodeAnalyzerOrchestrator` and proceeds as follows:
+The system's primary entry point is the `/analyze` API endpoint, which orchestrates a complex, potentially iterative workflow designed to produce a high-quality, validated analysis of a given code sample.
 
-1.  **Initial Detection (Parallel):**
-    *   `DeterministicLanguageDetectionAgent`: Detects the programming language of the code sample using deterministic logic.
-    *   `DeterministicRegionTagAgent`: Extracts region tags from the code sample using deterministic logic.
+1.  **Primary Analysis Workflow (`CodeAnalyzerOrchestrator`):** The process begins with the main analysis workflow, which is executed at least once.
+    *   **Initial Detection (Parallel):** The orchestrator first runs two deterministic agents in parallel to quickly gather basic metadata without incurring LLM costs.
+        *   `DeterministicLanguageDetectionAgent`: Identifies the programming language from the file extension or code content.
+        *   `DeterministicRegionTagAgent`: Extracts all `[START ...]` and `[END ...]` tags using regular expressions.
+    *   **Code Cleaning:** The `CodeCleaningAgent` removes all comments from the code snippet. This focuses the subsequent LLM analysis on the functional code, preventing comments from influencing the evaluation.
+    *   **Product Categorization:** The `ProductCategorizationAgent` identifies the primary Google Cloud product (e.g., "Spanner", "Cloud Storage") associated with the code. It uses a fast, local search-based tool first and only falls back to an LLM call if the initial tool fails, optimizing for both speed and accuracy.
+    *   **Core Evaluation (Sequential):** This is a two-step process:
+        1.  `InitialAnalysisAgent`: An LLM agent acting as a "Principal Software Engineer" performs a comprehensive, qualitative review of the code. It is equipped with Google Search to verify API usage and best practices. It takes feedback from previous validation loops (if any) into account to improve its analysis. Its output is detailed, unstructured text.
+        2.  `JsonFormattingAgent`: A second, more lightweight LLM agent takes the unstructured text from the previous step and meticulously formats it into a structured JSON object that conforms to the `EvaluationOutput` Pydantic model.
+    *   **Result Processing:** The `ResultProcessingAgent` performs final post-processing on the JSON output. Its key responsibility is to enforce the "single penalty" rule, which de-duplicates recommendations across different evaluation criteria to ensure the final feedback is concise and non-redundant.
 
-2.  **Code Cleaning:**
-    *   `CodeCleaningAgent`: Removes comments from the code to focus the analysis on executable logic.
+2.  **Validation Workflow (`ValidationOrchestrator`):** After the primary analysis workflow completes, the API layer immediately initiates a validation workflow to act as a "peer review".
+    *   **Verification:** The `EvaluationVerificationAgent`, also acting as a "Principal Software Engineer," receives the original code and the JSON analysis from the first workflow. Its sole mission is to validate the *correctness* of the analysis. It heavily uses the `google_search` tool to fact-check every claim made about API usage, method names, parameters, and error handling. It outputs its findings as unstructured text, starting with a 1-10 score.
+    *   **Formatting:** The `ValidationFormattingAgent` takes this unstructured validation text and formats it into a structured JSON object conforming to the `EvaluationValidationOutput` Pydantic model.
 
-3.  **Product Categorization:**
-    *   `ProductCategorizationAgent`: Categorizes the code sample into a specific Google Cloud product using a combination of a local search index and an LLM fallback.
-
-4.  **Evaluation (Sequential):**
-    *   `InitialAnalysisAgent`: Performs a detailed, free-form analysis of the code against multiple criteria using a comprehensive prompt.
-    *   `JsonFormattingAgent`: Converts the free-form text analysis from the previous step into a structured JSON object based on a strict schema.
-
-5.  **Result Processing:**
-    *   `ResultProcessingAgent`: Processes the final JSON, enforces the "single penalty" rule to deduplicate recommendations, and combines all data into the final output.
-
-6.  **Iterative Validation and Refinement (API Layer):**
-    *   After the primary analysis is complete, the API layer triggers the `ValidationOrchestrator`.
-    *   `EvaluationVerificationAgent`: This agent takes the original code and the completed analysis as input. It uses the `google_search` tool to verify the specific claims made in the analysis, particularly around API usage. It outputs a raw, unstructured text summary of its findings.
-    *   `ValidationFormattingAgent`: This agent takes the raw text from the verification agent and converts it into a structured JSON object containing a validation score (1-10) and detailed reasoning, based on the `EvaluationValidationOutput` schema.
-    *   **Iterative Loop:** If the `validation_score` is below a configurable threshold (default is 7), the API layer will re-invoke the `CodeAnalyzerOrchestrator`. The reasoning from the validation is passed as feedback to the `InitialAnalysisAgent`, which incorporates it into its next analysis attempt. This loop continues until the validation score meets the threshold or a maximum number of iterations (default is 3) is reached.
+3.  **Iterative Refinement Loop (API Layer):** The API layer inspects the `validation_score` from the validation workflow.
+    *   **If Score > 7:** The analysis is considered high quality. The loop terminates, and the final analysis and validation history are returned to the user.
+    *   **If Score <= 7:** The analysis is considered flawed. The `reasoning` from the validation is captured and used as feedback. The process returns to step 1, and the `CodeAnalyzerOrchestrator` is invoked again. The feedback is passed into the `InitialAnalysisAgent`'s prompt, instructing it to correct its previous mistakes. This loop continues until the validation score meets the threshold or the `MAX_VALIDATION_LOOPS` environment variable limit is reached.
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant API
+    participant API Layer
     participant CodeAnalyzerOrchestrator
     participant ValidationOrchestrator
 
-    User->>API: POST /analyze
-    loop Validation Loop (max 3 iterations)
-        API->>CodeAnalyzerOrchestrator: analyze_code(code, feedback?)
-        CodeAnalyzerOrchestrator-->>API: Analysis JSON
-
-        API->>ValidationOrchestrator: validate_analysis(code, analysis_json)
-        ValidationOrchestrator-->>API: Validation JSON
-
-        alt Validation Score > 7
-            API-->>User: 200 OK (Combined Result)
+    User->>API Layer: POST /analyze
+    
+    loop Iterative Analysis & Validation (configurable, e.g., max 3 times)
+        API Layer->>CodeAnalyzerOrchestrator: run_async(code, feedback?)
+        CodeAnalyzerOrchestrator-->>API Layer: Returns Analysis JSON
+        
+        API Layer->>ValidationOrchestrator: run_async(code, analysis)
+        ValidationOrchestrator-->>API Layer: Returns Validation JSON {score, reasoning}
+        
+        alt Validation Score is Acceptable (> 7)
+            API Layer-->>User: 200 OK with Final Analysis & Validation History
             break
         else
-            API->>API: Prepare feedback for next loop
+            API Layer->>API Layer: Prepare 'reasoning' as 'feedback' for next iteration
         end
+    end
+    
+    opt Max iterations reached
+         API Layer-->>User: 200 OK with Last Analysis & Full Validation History
     end
 ```
 
@@ -129,11 +130,11 @@ The quality of the analysis is highly dependent on the quality of the prompts. T
 
 ## 5. Data Models
 
-The system uses Pydantic models to define the expected structure of its outputs.
+The system uses Pydantic models to define the expected structure of its inputs and outputs, ensuring type safety and clear API contracts.
 
 ### 5.1. `EvaluationOutput` Schema
 
-This model, defined in `agentic_code_analyzer/models.py`, structures the primary analysis. It is enforced by the `JsonFormattingAgent`.
+This is the core data model for the primary analysis, enforced by the `JsonFormattingAgent`. It provides a rich, multi-faceted view of the code's health.
 
 ```json
 {
@@ -161,12 +162,28 @@ This model, defined in `agentic_code_analyzer/models.py`, structures the primary
 
 ### 5.2. `EvaluationValidationOutput` Schema
 
-This model, defined in `agentic_code_analyzer/validation_model.py`, structures the output of the validation workflow. It is enforced by the `ValidationFormattingAgent`.
+This model structures the output of the validation workflow, enforced by the `ValidationFormattingAgent`. It serves as the "peer review" of the main analysis.
 
 ```json
 {
   "validation_score": "integer (1-10)",
   "reasoning": "string"
+}
+```
+
+### 5.3. `FinalValidatedAnalysisWithHistory` Schema
+
+This is the final response model for the `/analyze` and `/analyze_github_link` endpoints. It encapsulates the entire iterative process.
+
+```json
+{
+  "analysis": { ... }, // The final, highest-scoring EvaluationOutput object
+  "validation_history": [
+    {
+      "validation_score": "integer (1-10)",
+      "reasoning": "string"
+    }
+  ]
 }
 ```
 
@@ -176,7 +193,7 @@ The system provides a REST API for analyzing code samples. The API is built usin
 
 ### 6.1. `POST /analyze`
 
-Analyzes a code sample and returns a detailed analysis of its health.
+Analyzes a code sample, iteratively validates the analysis, and returns the final, validated result.
 
 **Request Body:**
 
@@ -185,20 +202,24 @@ Analyzes a code sample and returns a detailed analysis of its health.
 
 **Response Body (`FinalValidatedAnalysisWithHistory`):**
 
-*   `analysis`: The full JSON object from the final iteration of the primary analysis workflow.
-*   `validation_history`: A list of JSON objects, each containing the `validation_score` and `reasoning` from each validation attempt.
+*   `analysis`: The full JSON object from the final and best iteration of the primary analysis workflow.
+*   `validation_history`: A list of JSON objects, each containing the `validation_score` and `reasoning` from every validation attempt, allowing clients to see the full history of the refinement process.
 
 ### 6.2. `POST /analyze_github_link`
 
-Analyzes a code sample from a GitHub link and returns a detailed analysis of its health.
+Analyzes a code sample from a GitHub link. This endpoint fetches the code from the link and then calls the `/analyze` logic.
 
 **Request Body:**
 
 *   `github_link` (string, required): The GitHub link to the code sample.
 
+**Response Body (`FinalValidatedAnalysisWithHistory`):**
+
+*   The same response structure as the `/analyze` endpoint.
+
 ### 6.3. `POST /validate`
 
-Performs a standalone validation of an existing evaluation.
+Performs a standalone, one-shot validation of an existing evaluation JSON object against its source code. This is useful for testing the validation logic independently or for validating analyses generated by other systems.
 
 **Request Body (`ValidationRequest`):**
 

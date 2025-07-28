@@ -202,39 +202,8 @@ async def analyze_code(request: CodeRequest):
             status_code=500, detail="Analysis failed to produce any result."
         )
 
-    # Extract the nested evaluation object for validation
-    evaluation_data = current_analysis_json.get("evaluation")
-    if not evaluation_data or not isinstance(evaluation_data, dict):
-        logger.error(
-            f"Final analysis JSON is missing or has a malformed 'evaluation' key. Found: {current_analysis_json}"
-        )
-        raise HTTPException(
-            status_code=500,
-            detail="Final analysis JSON is missing the 'evaluation' key.",
-        )
-
-    # Reconstruct the full analysis object to match the old format
-    # that the UI expects.
-    final_session = await session_service.get_session(
-        app_name="agentic_code_analyzer", user_id="api_user", session_id=session_id
-    )
-    if not final_session:
-        raise HTTPException(status_code=500, detail="Failed to retrieve final session.")
-
-    full_analysis_object = {
-        "language": final_session.state.get(
-            "language_detection_agent_output", "Unknown"
-        ),
-        "product_name": final_session.state.get("product_name", "Unknown"),
-        "product_category": final_session.state.get("product_category", "Unknown"),
-        "region_tags": final_session.state.get(
-            "region_tag_extraction_agent_output", ""
-        ).split(","),
-        "evaluation": evaluation_data,
-    }
-
     return FinalValidatedAnalysisWithHistory(
-        analysis=full_analysis_object,
+        analysis=current_analysis_json,
         validation_history=validation_history,
     )
 

@@ -27,7 +27,7 @@ The Health Scoring Agent is a sophisticated, multi-agent system designed to anal
 - **Code Cleaning:** The system includes a utility to remove comments from the code before analysis. This ensures that the analysis is focused on the executable code and is not influenced by comments.
 - **Web Interface:** The project includes a simple web interface for submitting code samples for analysis. The interface provides a user-friendly way to interact with the system and view the results of the analysis.
 - **Self-Validation Workflow:** Includes a secondary, independent agentic workflow designed to validate the output of the primary analysis. This "peer review" model uses Google Search to verify the claims made by the initial evaluation, adding a robust layer of quality control and increasing the reliability of the final score.
-- **Iterative Refinement:** The system can be configured to re-run the analysis if the validation score is below a certain threshold. This allows the system to iteratively refine its analysis based on the feedback from the validation agent, leading to a more accurate and reliable final result.
+- **Iterative Refinement:** The system is designed to pursue high-quality analysis through a feedback loop. It can be configured to re-run the entire analysis if the validation agent's score for the analysis is below a set threshold (e.g., 7 out of 10). The reasoning from the validation is passed back to the analysis agent as constructive feedback, allowing it to refine its evaluation in the next iteration. This process continues until the analysis is deemed high-quality or a configurable maximum number of attempts is reached.
 
 ## 🏗️ System Architecture
 
@@ -102,6 +102,7 @@ To get started with the Health Scoring Agent, you will need to have Python 3.12 
     GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
     GEMINI_PRO_MODEL="gemini-2.5-pro"
     GEMINI_FLASH_LITE_MODEL="gemini-2.5-flash-lite"
+    MAX_VALIDATION_LOOPS=3
     ```
 
 5.  **Run the application:**
