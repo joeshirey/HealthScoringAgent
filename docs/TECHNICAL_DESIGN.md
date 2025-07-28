@@ -77,11 +77,10 @@ sequenceDiagram
         API Layer->>ValidationOrchestrator: run_async(code, analysis)
         ValidationOrchestrator-->>API Layer: Returns Validation JSON {score, reasoning}
         
-        alt score > 7
-            API Layer->>API Layer: Validation Succeeded
-            break
-        else score <= 7
-            API Layer->>API Layer: Validation Failed, Prepare feedback for next loop
+        alt Validation Score is Acceptable (> 7)
+            API Layer->>API Layer: Validation Succeeded, loop terminates
+        else Validation Score is Low (<= 7)
+            API Layer->>API Layer: Validation Failed, prepare feedback for next loop
         end
     end
     
