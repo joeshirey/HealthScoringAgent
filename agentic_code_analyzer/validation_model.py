@@ -39,6 +39,9 @@ class ValidationAttempt(BaseModel):
     reasoning: str = Field(
         ..., description="The reasoning provided for this validation score."
     )
+    evaluation_json: Dict[str, Any] = Field(
+        ..., description="The evaluation JSON that was validated in this attempt."
+    )
 
 
 class FinalValidatedAnalysisWithHistory(BaseModel):
@@ -51,5 +54,6 @@ class FinalValidatedAnalysisWithHistory(BaseModel):
         ..., description="The final, validated code analysis object."
     )
     validation_history: List[ValidationAttempt] = Field(
-        ..., description="A list of all validation attempts made during the analysis."
+        ...,
+        description="A list of all validation attempts made, including the JSON that was validated in each attempt.",
     )

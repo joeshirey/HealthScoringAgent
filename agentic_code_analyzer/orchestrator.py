@@ -319,7 +319,7 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         initial_analysis_agent = InitialAnalysisAgent(
             name="initial_analysis_agent",
             output_key="initial_analysis_output",
-            model=os.environ.get("GEMINI_PRO_MODEL", "gemini-1.5-pro-latest"),
+            model=os.environ.get("GEMINI_PRO_MODEL", "gemini-2.5-pro"),
         )
 
         # This agent uses a faster, lighter model for the formatting task.
@@ -329,7 +329,7 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
             output_schema=EvaluationOutput,
             disallow_transfer_to_parent=True,
             disallow_transfer_to_peers=True,
-            model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-1.5-flash-latest"),
+            model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-2.5-flash-lite"),
         )
         return SequentialAgent(
             name="evaluation_workflow",

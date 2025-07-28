@@ -137,8 +137,8 @@ Follow these instructions to set up and run the Health Scoring Agent locally.
     GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
 
     # The model names for the different Gemini models
-    GEMINI_PRO_MODEL="gemini-1.5-pro-latest"
-    GEMINI_FLASH_LITE_MODEL="gemini-1.5-flash-latest"
+    GEMINI_PRO_MODEL="gemini-2.5-pro"
+    GEMINI_FLASH_LITE_MODEL="gemini-2.5-flash-lite"
 
     # The maximum number of times the validation loop can run
     MAX_VALIDATION_LOOPS=3

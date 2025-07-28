@@ -90,7 +90,7 @@ async def analyze_code(request: CodeRequest) -> FinalValidatedAnalysisWithHistor
         A `FinalValidatedAnalysisWithHistory` object containing the final
         analysis and a history of all validation attempts.
     """
-    max_loops = int(os.environ.get("MAX_VALIDATION_LOOPS", 3))
+    max_loops = int(os.environ.get("MAX_VALIDATION_LOOPS", 5))
     validation_history: List[ValidationAttempt] = []
     current_analysis_json: Dict[str, Any] = {}
     feedback_for_next_loop = ""
@@ -155,6 +155,7 @@ async def analyze_code(request: CodeRequest) -> FinalValidatedAnalysisWithHistor
             ValidationAttempt(
                 validation_score=validation_result.validation_score,
                 reasoning=validation_result.reasoning,
+                evaluation_json=current_analysis_json,
             )
         )
 
@@ -342,11 +343,26 @@ async def _fetch_code_from_github(github_link: str) -> str:
     """
     try:
         parsed_url = urlparse(github_link)
-        if parsed_url.hostname not in ALLOWED_DOMAINS:
-            logger.error(f"Invalid GitHub domain: {parsed_url.hostname}")
+<<<<<<< HEAD
+        if parsed_url.scheme not in ("http", "https"):
             raise HTTPException(
-                status_code=400, detail="Invalid or unsupported GitHub domain."
+                status_code=400,
+                detail=f"Invalid URL scheme: '{parsed_url.scheme}'. Must be 'http' or 'https'.",
             )
+        if not parsed_url.hostname or parsed_url.hostname not in ALLOWED_DOMAINS:
+            logger.error(f"Invalid or missing GitHub domain: {parsed_url.hostname}")
+            raise HTTPException(status_code=400, detail="Invalid or unsupported GitHub domain.")
+=======
+        # Explicitly check for a valid scheme to catch typos like "hhttps".
+        if parsed_url.scheme not in ("http", "https"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid URL scheme: '{parsed_url.scheme}'. Must be 'http' or 'https'.",
+            )
+        if not parsed_url.hostname or parsed_url.hostname not in ALLOWED_DOMAINS:
+            logger.error(f"Invalid or missing GitHub domain: {parsed_url.hostname}")
+            raise HTTPException(status_code=400, detail="Invalid or unsupported GitHub domain.")
+>>>>>>> 4052305 (feat: Add evaluation JSON to validation history and improve URL handling)
 
         # Convert the standard GitHub URL to the raw content URL.
         raw_url = github_link.replace(
@@ -359,8 +375,19 @@ async def _fetch_code_from_github(github_link: str) -> str:
             code = response.text
         logger.info(f"Successfully fetched code from {raw_url}")
         return code
+    except httpx.RequestError as e:
+        # This catches network errors like invalid protocols, DNS failures, etc.
+        logger.error(f"Error requesting code from GitHub: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=400,
+            detail=f"Could not fetch code from the provided URL. Error: {e.__class__.__name__}",
+        )
     except httpx.HTTPStatusError as e:
-        logger.error(f"Error fetching code from GitHub: {e}", exc_info=True)
+        # This catches non-2xx server responses.
+        logger.error(
+            f"Error fetching code from GitHub with status {e.response.status_code}: {e}",
+            exc_info=True,
+        )
         raise HTTPException(
             status_code=400,
             detail=f"Error fetching code from GitHub: {e.response.text}",

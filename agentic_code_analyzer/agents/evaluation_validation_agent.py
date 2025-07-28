@@ -98,13 +98,13 @@ class ValidationOrchestrator(SequentialAgent):
         verification_agent = EvaluationVerificationAgent(
             name="evaluation_verification_agent",
             output_key="raw_validation_output",
-            model=os.environ.get("GEMINI_PRO_MODEL", "gemini-1.5-pro-latest"),
+            model=os.environ.get("GEMINI_PRO_MODEL", "gemini-2.5-pro"),
         )
         # The formatting agent uses a faster model for structuring the output.
         formatting_agent = ValidationFormattingAgent(
             name="validation_formatting_agent",
             output_key="validation_output",
-            model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-1.5-flash-latest"),
+            model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-2.5-flash-lite"),
         )
 
         super().__init__(
