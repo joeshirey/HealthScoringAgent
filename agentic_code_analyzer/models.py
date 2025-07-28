@@ -86,7 +86,7 @@ class ApiEvaluationDetail(BaseModel):
     status: Literal["Pass", "Fail", "NA"] = Field(
         ..., description="The result of the check (Pass, Fail, or Not Applicable)."
     )
-    reasoning: str = Field(
+    assessment: str = Field(
         ..., description="The reasoning behind the evaluation status."
     )
 
@@ -109,7 +109,7 @@ class ApiCallAnalysis(BaseModel):
     line_number: int = Field(
         ..., description="The line number where the API call is made."
     )
-    evaluation: ApiCallEvaluation
+    assessment: ApiCallEvaluation
 
 
 # --- Main Evaluation Schema ---
@@ -129,12 +129,12 @@ class CriteriaBreakdown(BaseModel):
     weight: float = Field(
         ..., description="The weight of this criterion in the overall final score."
     )
-    evaluation: str = Field(
-        ..., description="A high-level summary of the evaluation for this criterion."
+    assessment: str = Field(
+        ..., description="A high-level summary of the assessment for this criterion."
     )
-    evaluation_details: Union[str, RunnabilityChecks, List[ApiCallAnalysis]] = Field(
+    assessment_details: Union[str, RunnabilityChecks, List[ApiCallAnalysis]] = Field(
         ...,
-        description="Detailed evaluation, which can be a simple string or a structured object for specific criteria.",
+        description="Detailed assessment, which can be a simple string or a structured object for specific criteria.",
     )
     recommendations_for_llm_fix: List[str] = Field(
         default=[],

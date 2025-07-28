@@ -96,7 +96,7 @@ class ResultProcessingAgent(BaseAgent):
             return {}
 
     def _enforce_single_penalty_hierarchy(
-        self, evaluation_output: Dict[str, Any]
+        self, assessment_output: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         Enforces the single penalty rule on evaluation criteria.
@@ -107,7 +107,7 @@ class ResultProcessingAgent(BaseAgent):
         will only be kept in "runnability" (the higher-priority criterion).
 
         Args:
-            evaluation_output: The dictionary containing the analysis results,
+            assessment_output: The dictionary containing the analysis results,
                 expected to have a 'criteria_breakdown' key.
 
         Returns:
@@ -115,14 +115,14 @@ class ResultProcessingAgent(BaseAgent):
             according to the hierarchy.
         """
         if (
-            not isinstance(evaluation_output, dict)
-            or "criteria_breakdown" not in evaluation_output
+            not isinstance(assessment_output, dict)
+            or "criteria_breakdown" not in assessment_output
         ):
-            return evaluation_output
+            return assessment_output
 
-        criteria_breakdown = evaluation_output.get("criteria_breakdown")
+        criteria_breakdown = assessment_output.get("criteria_breakdown")
         if not isinstance(criteria_breakdown, list):
-            return evaluation_output
+            return assessment_output
 
         # The hierarchy defines the order of importance for criteria.
         hierarchy: List[str] = [
@@ -168,8 +168,8 @@ class ResultProcessingAgent(BaseAgent):
             criterion["recommendations_for_llm_fix"] = unique_recommendations
             processed_criteria.append(criterion)
 
-        evaluation_output["criteria_breakdown"] = processed_criteria
-        return evaluation_output
+        assessment_output["criteria_breakdown"] = processed_criteria
+        return assessment_output
 
     async def _run_async_impl(
         self, ctx: InvocationContext
@@ -190,17 +190,17 @@ class ResultProcessingAgent(BaseAgent):
         logger.info(f"[{self.name}] Starting result processing.")
         try:
             # Retrieve the raw output from the JSON formatting agent.
-            raw_evaluation_output = ctx.session.state.get(
+            raw_assessment_output = ctx.session.state.get(
                 "evaluation_review_agent_output", "{}"
             )
             logger.debug(f"[{self.name}] Raw evaluation output received.")
 
             # Safely parse the JSON output.
-            processed_output = self._safe_json_load(raw_evaluation_output)
+            processed_output = self._safe_json_load(raw_assessment_output)
             logger.debug(f"[{self.name}] Safely loaded JSON output.")
 
             # Apply the single penalty rule to deduplicate recommendations.
-            deduplicated_evaluation = self._enforce_single_penalty_hierarchy(
+            deduplicated_assessment = self._enforce_single_penalty_hierarchy(
                 processed_output
             )
             logger.debug(f"[{self.name}] Enforced single penalty hierarchy.")
@@ -217,7 +217,7 @@ class ResultProcessingAgent(BaseAgent):
                 "region_tags": ctx.session.state.get(
                     "region_tag_extraction_agent_output", ""
                 ).split(","),
-                "evaluation": deduplicated_evaluation,
+                "assessment": deduplicated_assessment,
             }
 
             final_json = json.dumps(final_output, indent=2)
