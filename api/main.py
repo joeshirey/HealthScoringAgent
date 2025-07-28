@@ -350,7 +350,9 @@ async def _fetch_code_from_github(github_link: str) -> str:
             )
         if not parsed_url.hostname or parsed_url.hostname not in ALLOWED_DOMAINS:
             logger.error(f"Invalid or missing GitHub domain: {parsed_url.hostname}")
-            raise HTTPException(status_code=400, detail="Invalid or unsupported GitHub domain.")
+            raise HTTPException(
+                status_code=400, detail="Invalid or unsupported GitHub domain."
+            )
 
         # Convert the standard GitHub URL to the raw content URL.
         raw_url = github_link.replace(
