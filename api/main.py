@@ -343,7 +343,6 @@ async def _fetch_code_from_github(github_link: str) -> str:
     """
     try:
         parsed_url = urlparse(github_link)
-<<<<<<< HEAD
         if parsed_url.scheme not in ("http", "https"):
             raise HTTPException(
                 status_code=400,
@@ -352,17 +351,6 @@ async def _fetch_code_from_github(github_link: str) -> str:
         if not parsed_url.hostname or parsed_url.hostname not in ALLOWED_DOMAINS:
             logger.error(f"Invalid or missing GitHub domain: {parsed_url.hostname}")
             raise HTTPException(status_code=400, detail="Invalid or unsupported GitHub domain.")
-=======
-        # Explicitly check for a valid scheme to catch typos like "hhttps".
-        if parsed_url.scheme not in ("http", "https"):
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid URL scheme: '{parsed_url.scheme}'. Must be 'http' or 'https'.",
-            )
-        if not parsed_url.hostname or parsed_url.hostname not in ALLOWED_DOMAINS:
-            logger.error(f"Invalid or missing GitHub domain: {parsed_url.hostname}")
-            raise HTTPException(status_code=400, detail="Invalid or unsupported GitHub domain.")
->>>>>>> 4052305 (feat: Add evaluation JSON to validation history and improve URL handling)
 
         # Convert the standard GitHub URL to the raw content URL.
         raw_url = github_link.replace(
