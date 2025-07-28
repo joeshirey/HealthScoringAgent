@@ -1,7 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List
-
-from agentic_code_analyzer.models import EvaluationOutput
+from typing import List, Dict, Any
 
 
 class EvaluationValidationOutput(BaseModel):
@@ -31,5 +29,5 @@ class ValidationAttempt(BaseModel):
 class FinalValidatedAnalysisWithHistory(BaseModel):
     """The final API response, including the analysis and all validation attempts."""
 
-    analysis: EvaluationOutput
+    analysis: Dict[str, Any]
     validation_history: List[ValidationAttempt]

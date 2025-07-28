@@ -212,8 +212,23 @@ async def analyze_code(request: CodeRequest):
             detail="Final analysis JSON is missing the 'evaluation' key.",
         )
 
+    # Reconstruct the full analysis object to match the old format
+    # that the UI expects.
+    final_session = await session_service.get_session(
+        app_name="agentic_code_analyzer", user_id="api_user", session_id=session_id
+    )
+    full_analysis_object = {
+        "language": final_session.state.get("language_detection_agent_output", "Unknown"),
+        "product_name": final_session.state.get("product_name", "Unknown"),
+        "product_category": final_session.state.get("product_category", "Unknown"),
+        "region_tags": final_session.state.get(
+            "region_tag_extraction_agent_output", ""
+        ).split(","),
+        "evaluation": evaluation_data,
+    }
+
     return FinalValidatedAnalysisWithHistory(
-        analysis=EvaluationOutput.model_validate(evaluation_data),
+        analysis=full_analysis_object,
         validation_history=validation_history,
     )
 
