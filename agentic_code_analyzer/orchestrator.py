@@ -171,6 +171,34 @@ class ResultProcessingAgent(BaseAgent):
         assessment_output["criteria_breakdown"] = processed_criteria
         return assessment_output
 
+    def _deduplicate_criteria(
+        self, assessment_output: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        if (
+            not isinstance(assessment_output, dict)
+            or "criteria_breakdown" not in assessment_output
+        ):
+            return assessment_output
+
+        criteria_breakdown = assessment_output.get("criteria_breakdown")
+        if not isinstance(criteria_breakdown, list):
+            return assessment_output
+
+        unique_criteria: List[Dict[str, Any]] = []
+        seen_criteria_names: Set[str] = set()
+
+        for criterion in criteria_breakdown:
+            if not isinstance(criterion, dict):
+                continue  # Skip malformed entries
+
+            criterion_name = criterion.get("criterion_name")
+            if criterion_name and criterion_name not in seen_criteria_names:
+                unique_criteria.append(criterion)
+                seen_criteria_names.add(criterion_name)
+
+        assessment_output["criteria_breakdown"] = unique_criteria
+        return assessment_output
+
     async def _run_async_impl(
         self, ctx: InvocationContext
     ) -> AsyncGenerator[Event, None]:
@@ -199,9 +227,12 @@ class ResultProcessingAgent(BaseAgent):
             processed_output = self._safe_json_load(raw_assessment_output)
             logger.debug(f"[{self.name}] Safely loaded JSON output.")
 
+            deduplicated_criteria = self._deduplicate_criteria(processed_output)
+            logger.debug(f"[{self.name}] Deduplicated criteria.")
+
             # Apply the single penalty rule to deduplicate recommendations.
             deduplicated_assessment = self._enforce_single_penalty_hierarchy(
-                processed_output
+                deduplicated_criteria
             )
             logger.debug(f"[{self.name}] Enforced single penalty hierarchy.")
 

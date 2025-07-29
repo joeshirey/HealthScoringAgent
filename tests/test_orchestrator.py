@@ -147,3 +147,21 @@ def test_enforce_single_penalty_hierarchy(input_data, expected_output, test_id):
         )
 
     assert result == expected_output, f"Test failed for: {test_id}"
+
+
+def test_deduplicate_criteria():
+    """
+    Tests the _deduplicate_criteria method.
+    """
+    agent = ResultProcessingAgent(name="test_agent")
+    input_data = {
+        "criteria_breakdown": [
+            {"criterion_name": "A"},
+            {"criterion_name": "B"},
+            {"criterion_name": "A"},
+        ]
+    }
+    expected_output = {
+        "criteria_breakdown": [{"criterion_name": "A"}, {"criterion_name": "B"}]
+    }
+    assert agent._deduplicate_criteria(input_data) == expected_output
