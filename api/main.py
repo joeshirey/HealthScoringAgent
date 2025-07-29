@@ -143,6 +143,7 @@ async def analyze_code(request: CodeRequest) -> FinalValidatedAnalysisWithHistor
                 detail="Failed to parse analysis JSON from the orchestrator.",
             )
 
+
         # If the analysis resulted in a pre-emptive error (e.g., no region tags),
         # we don't need to validate it. We can exit the loop immediately.
         if "error" in current_analysis_json:
@@ -161,6 +162,7 @@ async def analyze_code(request: CodeRequest) -> FinalValidatedAnalysisWithHistor
             break
 
         # --- STAGE 2: Run the Validation Orchestrator ---
+
         validation_result = await _run_validation(
             session_service=session_service,
             session_id=session_id,
@@ -176,7 +178,7 @@ async def analyze_code(request: CodeRequest) -> FinalValidatedAnalysisWithHistor
             )
         )
 
-        # --- STAGE 3: Check the validation score ---
+        # --- STAGE 4: Check the validation score ---
         if validation_result.validation_score > 7:
             logger.info(
                 f"Validation passed with score {validation_result.validation_score}. Exiting loop."

@@ -41,6 +41,20 @@ from agentic_code_analyzer.agents.analysis.json_formatting_agent import (
 logger = logging.getLogger(__name__)
 
 
+SUPPORTED_LANGUAGES: List[str] = [
+    "C#",
+    "C++",
+    "Go",
+    "Java",
+    "Javascript",
+    "PHP",
+    "Python",
+    "Ruby",
+    "Rust",
+    "Terraform",
+]
+
+
 class ResultProcessingAgent(BaseAgent):
     """
     Processes, cleans, and formats the final analysis output.
@@ -281,6 +295,7 @@ class CodeAnalyzerOrchestrator(BaseAgent):
     This agent manages a sequence of sub-agents to perform a comprehensive
     analysis of a given code snippet. The workflow is as follows:
     1.  **Initial Detection:** Language and region tags are detected in parallel.
+
     2.  **Validation:** Validates the language and region tags, halting on failure.
     3.  **Code Cleaning:** Comments are removed from the code.
     4.  **Product Categorization:** The relevant product is identified.
@@ -288,6 +303,7 @@ class CodeAnalyzerOrchestrator(BaseAgent):
         followed by JSON formatting.
     6.  **Result Processing:** The final output is assembled and cleaned.
     """
+
 
     async def _run_async_impl(
         self, ctx: InvocationContext
@@ -341,6 +357,53 @@ class CodeAnalyzerOrchestrator(BaseAgent):
             yield event
         logger.info(f"[{self.name}] Result processing complete.")
 
+    async def _run_async_impl(
+        self, ctx: InvocationContext
+    ) -> AsyncGenerator[Event, None]:
+        """
+        Executes the orchestration logic.
+        """
+        async for event in self.initial_detection_agent.run_async(ctx):
+            if event.is_final_response():
+                break
+
+        region_tags = ctx.session.state.get("region_tag_extraction_agent_output")
+        if not region_tags:
+            logger.error(f"[{self.name}] No region tags found.")
+            yield Event(
+                author=self.name,
+                content=Content(
+                    parts=[Part(text=json.dumps({"error": "No Region Tags"}))]
+                ),
+                turn_complete=True,
+            )
+            return
+
+        language = ctx.session.state.get("language_detection_agent_output")
+        if language not in SUPPORTED_LANGUAGES:
+            logger.error(f"[{self.name}] Unsupported language: {language}")
+            yield Event(
+                author=self.name,
+                content=Content(
+                    parts=[Part(text=json.dumps({"error": "Unsupported language"}))]
+                ),
+                turn_complete=True,
+            )
+            return
+
+        sub_agents = [
+            self.code_cleaning_agent,
+            self.product_categorization_agent,
+            self.evaluation_agent,
+            self.result_processor,
+        ]
+        for agent in sub_agents:
+            async for event in agent.run_async(ctx):
+                if event.is_final_response():
+                    if agent == self.result_processor:
+                        yield event
+                    break
+
     def _create_initial_detection_agent(self) -> ParallelAgent:
         """
         Creates the parallel agent for the initial detection phase.
@@ -384,8 +447,6 @@ class CodeAnalyzerOrchestrator(BaseAgent):
             name="json_formatting_agent",
             output_key="evaluation_review_agent_output",
             output_schema=EvaluationOutput,
-            disallow_transfer_to_parent=True,
-            disallow_transfer_to_peers=True,
             model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-2.5-flash-lite"),
         )
         return SequentialAgent(

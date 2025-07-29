@@ -1,6 +1,5 @@
 import pytest
 import json
-from unittest.mock import MagicMock
 
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
@@ -13,17 +12,21 @@ from agentic_code_analyzer.orchestrator import CodeAnalyzerOrchestrator
 def mock_llm_agents(mocker):
     """Mocks the agents that interact with LLMs."""
     mock_code_cleaning = mocker.patch(
-        "agentic_code_analyzer.orchestrator.CodeCleaningAgent._run_async_impl"
+        "agentic_code_analyzer.orchestrator.CodeCleaningAgent", autospec=True
     )
     mock_initial_analysis = mocker.patch(
-        "agentic_code_analyzer.orchestrator.InitialAnalysisAgent._run_async_impl"
+        "agentic_code_analyzer.orchestrator.InitialAnalysisAgent", autospec=True
     )
     mock_json_formatting = mocker.patch(
-        "agentic_code_analyzer.orchestrator.JsonFormattingAgent._run_async_impl"
+        "agentic_code_analyzer.orchestrator.JsonFormattingAgent", autospec=True
     )
     mock_product_categorization = mocker.patch(
-        "agentic_code_analyzer.orchestrator.ProductCategorizationAgent._run_async_impl"
+        "agentic_code_analyzer.orchestrator.ProductCategorizationAgent", autospec=True
     )
+    mock_code_cleaning.return_value.parent_agent = None
+    mock_initial_analysis.return_value.parent_agent = None
+    mock_json_formatting.return_value.parent_agent = None
+    mock_product_categorization.return_value.parent_agent = None
     return (
         mock_code_cleaning,
         mock_initial_analysis,
@@ -46,11 +49,14 @@ async def test_orchestrator_full_run(mock_llm_agents):
     ) = mock_llm_agents
 
     # Define mock side effects for agents to update the session state
-    async def mock_initial_analysis_side_effect(ctx):
+    async def mock_initial_analysis_side_effect(*args, **kwargs):
+        ctx = args[0]
         ctx.session.state["initial_analysis_output"] = "This is a mock analysis."
-        yield MagicMock()
+        if False:
+            yield
 
-    async def mock_json_formatting_side_effect(ctx):
+    async def mock_json_formatting_side_effect(*args, **kwargs):
+        ctx = args[0]
         mock_assessment_output = {
             "overall_compliance_score": 85,
             "criteria_breakdown": [
@@ -73,20 +79,32 @@ async def test_orchestrator_full_run(mock_llm_agents):
         ctx.session.state["evaluation_review_agent_output"] = json.dumps(
             mock_assessment_output
         )
-        yield MagicMock()
+        if False:
+            yield
 
-    async def mock_product_cat_side_effect(ctx):
+    async def mock_product_cat_side_effect(*args, **kwargs):
+        ctx = args[0]
         ctx.session.state["product_name"] = "Mock Product"
         ctx.session.state["product_category"] = "Mock Category"
-        yield MagicMock()
+        if False:
+            yield
 
-    async def mock_code_cleaning_side_effect(ctx):
-        yield MagicMock()
+    async def mock_code_cleaning_side_effect(*args, **kwargs):
+        if False:
+            yield
 
-    mock_code_cleaning.side_effect = mock_code_cleaning_side_effect
-    mock_initial_analysis.side_effect = mock_initial_analysis_side_effect
-    mock_json_formatting.side_effect = mock_json_formatting_side_effect
-    mock_product_categorization.side_effect = mock_product_cat_side_effect
+    mock_code_cleaning.return_value.run_async.side_effect = (
+        mock_code_cleaning_side_effect
+    )
+    mock_initial_analysis.return_value.run_async.side_effect = (
+        mock_initial_analysis_side_effect
+    )
+    mock_json_formatting.return_value.run_async.side_effect = (
+        mock_json_formatting_side_effect
+    )
+    mock_product_categorization.return_value.run_async.side_effect = (
+        mock_product_cat_side_effect
+    )
 
     # 1. Setup the orchestrator and runner
     orchestrator = CodeAnalyzerOrchestrator(name="test_orchestrator")
@@ -161,3 +179,112 @@ async def test_orchestrator_full_run(mock_llm_agents):
 
     assert api_crit["recommendations_for_llm_fix"] == ["rec_A"]
     assert lang_crit["recommendations_for_llm_fix"] == ["rec_B"]
+
+
+@pytest.mark.asyncio
+async def test_orchestrator_no_region_tags(mock_llm_agents):
+    """
+    Tests that the orchestrator halts and returns an error when no region tags are found.
+    """
+    orchestrator = CodeAnalyzerOrchestrator(name="test_orchestrator")
+    session_service = InMemorySessionService()
+
+    code_snippet = "import os"
+
+    initial_state = {
+        "code_snippet": code_snippet,
+        "github_link": "http://mock.link",
+    }
+
+    await session_service.create_session(
+        app_name="test_app",
+        user_id="test_user",
+        session_id="test_session",
+        state=initial_state,
+    )
+
+    runner = Runner(
+        agent=orchestrator,
+        app_name="test_app",
+        session_service=session_service,
+    )
+
+    final_response = ""
+    async for event in runner.run_async(
+        user_id="test_user",
+        session_id="test_session",
+        new_message=Content(parts=[Part(text=code_snippet)]),
+    ):
+        if (
+            event.is_final_response()
+            and event.content
+            and event.content.parts
+            and event.content.parts[0].text
+        ):
+            final_response = event.content.parts[0].text
+
+    assert final_response, "Final response should not be empty"
+    final_data = json.loads(final_response)
+    assert final_data == {"error": "No Region Tags"}
+
+
+@pytest.mark.asyncio
+async def test_orchestrator_unsupported_language(mock_llm_agents, mocker):
+    """
+    Tests that the orchestrator halts and returns an error for an unsupported language.
+    """
+    mocker.patch(
+        "agentic_code_analyzer.orchestrator.DeterministicLanguageDetectionAgent.run_async"
+    )
+    orchestrator = CodeAnalyzerOrchestrator(name="test_orchestrator")
+    session_service = InMemorySessionService()
+
+    code_snippet = "# [START some_tag]\nimport os# [END some_tag]"
+
+    initial_state = {
+        "code_snippet": code_snippet,
+        "github_link": "http://mock.link",
+    }
+
+    await session_service.create_session(
+        app_name="test_app",
+        user_id="test_user",
+        session_id="test_session",
+        state=initial_state,
+    )
+
+    # Manually set the language to an unsupported one
+    session = await session_service.get_session(
+        app_name="test_app", user_id="test_user", session_id="test_session"
+    )
+    session.state["language_detection_agent_output"] = "Cobol"
+    await session_service.create_session(
+        app_name="test_app",
+        user_id="test_user",
+        session_id="test_session_unsupported_language",
+        state=session.state,
+    )
+
+    runner = Runner(
+        agent=orchestrator,
+        app_name="test_app",
+        session_service=session_service,
+    )
+
+    final_response = ""
+    async for event in runner.run_async(
+        user_id="test_user",
+        session_id="test_session_unsupported_language",
+        new_message=Content(parts=[Part(text=code_snippet)]),
+    ):
+        if (
+            event.is_final_response()
+            and event.content
+            and event.content.parts
+            and event.content.parts[0].text
+        ):
+            final_response = event.content.parts[0].text
+
+    assert final_response, "Final response should not be empty"
+    final_data = json.loads(final_response)
+    assert final_data == {"error": "Unsupported language"}
