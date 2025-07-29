@@ -422,8 +422,6 @@ class CodeAnalyzerOrchestrator(BaseAgent):
             name="json_formatting_agent",
             output_key="evaluation_review_agent_output",
             output_schema=EvaluationOutput,
-            disallow_transfer_to_parent=True,
-            disallow_transfer_to_peers=True,
             model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-2.5-flash-lite"),
         )
         return SequentialAgent(
