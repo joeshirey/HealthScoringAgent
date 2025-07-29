@@ -366,20 +366,18 @@ class CodeAnalyzerOrchestrator(BaseAgent):
             )
             return
 
-        async for event in self.code_cleaning_agent.run_async(ctx):
-            if event.is_final_response():
-                break
-
-        async for event in self.product_categorization_agent.run_async(ctx):
-            if event.is_final_response():
-                break
-
-        async for event in self.evaluation_agent.run_async(ctx):
-            if event.is_final_response():
-                break
-
-        async for event in self.result_processor.run_async(ctx):
-            yield event
+        sub_agents = [
+            self.code_cleaning_agent,
+            self.product_categorization_agent,
+            self.evaluation_agent,
+            self.result_processor,
+        ]
+        for agent in sub_agents:
+            async for event in agent.run_async(ctx):
+                if event.is_final_response():
+                    if agent == self.result_processor:
+                        yield event
+                    break
 
     def _create_initial_detection_agent(self) -> ParallelAgent:
         """
