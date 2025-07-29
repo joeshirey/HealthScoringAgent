@@ -42,23 +42,10 @@ jobs:
       - name: Install dependencies
         run: uv pip install -e .[dev]
 
-      - name: Lint and Auto-fix with ruff
+      - name: Lint with ruff
         run: |
-          uv run ruff check . --fix
-          uv run ruff format .
-
-      - name: Commit changes
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          # Check if there are any changes to commit
-          if ! git diff --quiet; then
-            git add -A
-            git commit -m "style: Auto-fix linting errors"
-            git push
-          else
-            echo "No linting changes to commit."
-          fi
+          uv run ruff check .
+          uv run ruff format . --check
 
       - name: Run tests with pytest
         run: |
