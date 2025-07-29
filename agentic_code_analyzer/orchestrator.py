@@ -304,6 +304,38 @@ class CodeAnalyzerOrchestrator(BaseAgent):
     6.  **Result Processing:** The final output is assembled and cleaned.
     """
 
+    initial_detection_agent: ParallelAgent
+    validation_agent: ValidationAgent
+    code_cleaning_agent: CodeCleaningAgent
+    product_categorization_agent: ProductCategorizationAgent
+    evaluation_agent: SequentialAgent
+    result_processor: ResultProcessingAgent
+
+    def __init__(self, **kwargs: Any):
+        """
+        Initializes the CodeAnalyzerOrchestrator and its sub-agents.
+
+        Args:
+            **kwargs: Keyword arguments passed to the parent `SequentialAgent`.
+        """
+        # Factory methods are used to construct the sub-agents.
+        initial_detection_agent = self._create_initial_detection_agent()
+        validation_agent = ValidationAgent(name="validation_agent")
+        code_cleaning_agent = CodeCleaningAgent(name="code_cleaning_agent")
+        product_categorization_agent = ProductCategorizationAgent(
+            name="product_categorization_agent"
+        )
+        evaluation_agent = self._create_evaluation_agent()
+        result_processor = self._create_result_processing_agent()
+        super().__init__(
+            initial_detection_agent=initial_detection_agent,
+            validation_agent=validation_agent,
+            code_cleaning_agent=code_cleaning_agent,
+            product_categorization_agent=product_categorization_agent,
+            evaluation_agent=evaluation_agent,
+            result_processor=result_processor,
+            **kwargs,
+        )
 
     async def _run_async_impl(
         self, ctx: InvocationContext
@@ -315,15 +347,13 @@ class CodeAnalyzerOrchestrator(BaseAgent):
         logger.info(f"[{self.name}] Starting code analysis orchestration.")
 
         # Step 1: Initial Detection (Parallel)
-        initial_detection_agent = self._create_initial_detection_agent()
-        async for event in initial_detection_agent.run_async(ctx):
+        async for event in self.initial_detection_agent.run_async(ctx):
             yield event
         logger.info(f"[{self.name}] Initial detection phase complete.")
 
         # Step 2: Validation
-        validation_agent = ValidationAgent(name="validation_agent")
         # The validation agent only yields an event if validation fails.
-        async for event in validation_agent.run_async(ctx):
+        async for event in self.validation_agent.run_async(ctx):
             # The only events yielded are final failure events.
             logger.warning(f"[{self.name}] Validation failed. Halting workflow.")
             yield event
@@ -332,77 +362,24 @@ class CodeAnalyzerOrchestrator(BaseAgent):
         logger.info(f"[{self.name}] Validation passed. Continuing workflow.")
 
         # Step 3: Code Cleaning
-        code_cleaning_agent = CodeCleaningAgent(name="code_cleaning_agent")
-        async for event in code_cleaning_agent.run_async(ctx):
+        async for event in self.code_cleaning_agent.run_async(ctx):
             yield event
         logger.info(f"[{self.name}] Code cleaning complete.")
 
         # Step 4: Product Categorization
-        product_categorization_agent = ProductCategorizationAgent(
-            name="product_categorization_agent"
-        )
-        async for event in product_categorization_agent.run_async(ctx):
+        async for event in self.product_categorization_agent.run_async(ctx):
             yield event
         logger.info(f"[{self.name}] Product categorization complete.")
 
         # Step 5: Evaluation
-        evaluation_agent = self._create_evaluation_agent()
-        async for event in evaluation_agent.run_async(ctx):
+        async for event in self.evaluation_agent.run_async(ctx):
             yield event
         logger.info(f"[{self.name}] Evaluation workflow complete.")
 
         # Step 6: Final Result Processing
-        result_processor = self._create_result_processing_agent()
-        async for event in result_processor.run_async(ctx):
+        async for event in self.result_processor.run_async(ctx):
             yield event
         logger.info(f"[{self.name}] Result processing complete.")
-
-    async def _run_async_impl(
-        self, ctx: InvocationContext
-    ) -> AsyncGenerator[Event, None]:
-        """
-        Executes the orchestration logic.
-        """
-        async for event in self.initial_detection_agent.run_async(ctx):
-            if event.is_final_response():
-                break
-
-        region_tags = ctx.session.state.get("region_tag_extraction_agent_output")
-        if not region_tags:
-            logger.error(f"[{self.name}] No region tags found.")
-            yield Event(
-                author=self.name,
-                content=Content(
-                    parts=[Part(text=json.dumps({"error": "No Region Tags"}))]
-                ),
-                turn_complete=True,
-            )
-            return
-
-        language = ctx.session.state.get("language_detection_agent_output")
-        if language not in SUPPORTED_LANGUAGES:
-            logger.error(f"[{self.name}] Unsupported language: {language}")
-            yield Event(
-                author=self.name,
-                content=Content(
-                    parts=[Part(text=json.dumps({"error": "Unsupported language"}))]
-                ),
-                turn_complete=True,
-            )
-            return
-
-        sub_agents = [
-            self.code_cleaning_agent,
-            self.product_categorization_agent,
-            self.evaluation_agent,
-            self.result_processor,
-        ]
-        for agent in sub_agents:
-            async for event in agent.run_async(ctx):
-                if event.is_final_response():
-                    if agent == self.result_processor:
-                        yield event
-                    break
 
     def _create_initial_detection_agent(self) -> ParallelAgent:
         """
