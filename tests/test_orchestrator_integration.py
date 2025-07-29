@@ -239,7 +239,7 @@ async def test_orchestrator_unsupported_language(mock_llm_agents, mocker):
     orchestrator = CodeAnalyzerOrchestrator(name="test_orchestrator")
     session_service = InMemorySessionService()
 
-    code_snippet = "# [START some_tag]\n" "import os" "# [END some_tag]"
+    code_snippet = "# [START some_tag]\nimport os# [END some_tag]"
 
     initial_state = {
         "code_snippet": code_snippet,
