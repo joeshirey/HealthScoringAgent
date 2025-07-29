@@ -51,25 +51,27 @@ async def test_orchestrator_full_run(mock_llm_agents):
         yield MagicMock()
 
     async def mock_json_formatting_side_effect(ctx):
-        mock_evaluation_output = {
-            "overall_score": 85,
+        mock_assessment_output = {
+            "overall_compliance_score": 85,
             "criteria_breakdown": [
                 {
                     "criterion_name": "api_effectiveness_and_correctness",
                     "score": 9,
-                    "reasoning": "The code correctly uses the API.",
+                    "assessment": "The code correctly uses the API.",
+                    "assessment_details": "details",
                     "recommendations_for_llm_fix": ["rec_A"],
                 },
                 {
                     "criterion_name": "language_best_practices",
                     "score": 7,
-                    "reasoning": "Some best practices are not followed.",
+                    "assessment": "Some best practices are not followed.",
+                    "assessment_details": "details",
                     "recommendations_for_llm_fix": ["rec_A", "rec_B"],
                 },
             ],
         }
         ctx.session.state["evaluation_review_agent_output"] = json.dumps(
-            mock_evaluation_output
+            mock_assessment_output
         )
         yield MagicMock()
 
@@ -141,11 +143,11 @@ async def test_orchestrator_full_run(mock_llm_agents):
     assert final_data["product_name"] == "Mock Product"
     assert final_data["product_category"] == "Mock Category"
 
-    evaluation = final_data["evaluation"]
-    assert evaluation["overall_score"] == 85
+    assessment = final_data["assessment"]
+    assert assessment["overall_compliance_score"] == 85
 
     breakdown = sorted(
-        evaluation["criteria_breakdown"], key=lambda x: x["criterion_name"]
+        assessment["criteria_breakdown"], key=lambda x: x["criterion_name"]
     )
 
     api_crit = next(
