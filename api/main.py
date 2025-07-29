@@ -235,24 +235,29 @@ async def _run_validation(
     validation_orchestrator = ValidationOrchestrator(
         name=f"validation_orchestrator_iter_{iteration}"
     )
+    # Update the session state with the data needed for validation.
+    session = await session_service.get_session(
+        app_name="agentic_code_analyzer", user_id="api_user", session_id=session_id
+    )
+    if session:
+        session.state["code_snippet"] = code
+        session.state["evaluation_json"] = evaluation
+        await session_service.create_session(
+            app_name=session.app_name,
+            user_id=session.user_id,
+            session_id=session.id,
+            state=session.state,
+        )
+
     validation_runner = Runner(
         agent=validation_orchestrator,
         app_name="agentic_code_analyzer",
         session_service=session_service,
     )
 
-    # The validation input is a combination of the original code and the analysis.
-    validation_input = f"""
-Original Code:
-```
-{code}
-```
+    # The validation input is now a simple static message.
+    validation_input = "Please validate the analysis."
 
-Original Evaluation JSON:
-```json
-{json.dumps(evaluation, indent=2)}
-```
-"""
     logger.info("Starting validation agent workflow...")
     async for _ in validation_runner.run_async(
         user_id="api_user",

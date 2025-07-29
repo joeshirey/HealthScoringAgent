@@ -8,10 +8,14 @@ Your mission is to **validate the correctness and quality of the AI-generated as
 
 # Inputs
 
-You will receive a combined input containing two distinct parts:
-
-1.  **Original Code:** The source code that was assessed.
-2.  **Original Assessment JSON:** The JSON output from the first AI agent that performed the assessment.
+1.  **Original Code:**
+    ```
+    {{code_snippet}}
+    ```
+2.  **Original Assessment JSON:**
+    ```json
+    {{evaluation_json}}
+    ```
 
 ---
 

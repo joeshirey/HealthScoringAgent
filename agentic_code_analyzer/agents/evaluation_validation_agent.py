@@ -5,11 +5,14 @@ This includes the `ValidationOrchestrator` and its sub-agents, which are
 designed to verify the accuracy of an initial code analysis.
 """
 
+import json
 import os
 from typing import Any
 
 from google.adk.agents import LlmAgent, SequentialAgent
+from google.adk.agents.invocation_context import InvocationContext
 from google.adk.tools import google_search
+from google.genai.types import Content
 
 from agentic_code_analyzer.validation_model import EvaluationValidationOutput
 
@@ -21,6 +24,8 @@ class EvaluationVerificationAgent(LlmAgent):
     This agent uses Google Search to fact-check the claims made in the original
     evaluation and produces a raw text analysis of its findings.
     """
+
+    instruction: str
 
     def __init__(self, **kwargs: Any):
         """
@@ -43,6 +48,24 @@ class EvaluationVerificationAgent(LlmAgent):
             tools=[google_search],
             **kwargs,
         )
+
+    def _build_prompt(self, ctx: InvocationContext) -> Content:
+        """
+        Builds the prompt for the LLM by injecting the code and evaluation
+        from the session state into the instruction template.
+        """
+        code_snippet = ctx.session.state.get("code_snippet", "")
+        evaluation_json = ctx.session.state.get("evaluation_json", {})
+
+        # Create a pretty-printed JSON string for the prompt.
+        evaluation_str = json.dumps(evaluation_json, indent=2)
+
+        # Replace placeholders in the instruction template.
+        prompt_text = self.instruction.replace("{{code_snippet}}", code_snippet)
+        prompt_text = prompt_text.replace("{{evaluation_json}}", evaluation_str)
+
+        # The final prompt is just the formatted text.
+        return Content.from_parts(prompt_text)
 
 
 class ValidationFormattingAgent(LlmAgent):
