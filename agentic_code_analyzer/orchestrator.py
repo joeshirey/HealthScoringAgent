@@ -274,19 +274,27 @@ class ResultProcessingAgent(BaseAgent):
         )
 
 
-class CodeAnalyzerOrchestrator(SequentialAgent):
+class CodeAnalyzerOrchestrator(BaseAgent):
     """
     Orchestrates the end-to-end code analysis workflow.
 
     This agent manages a sequence of sub-agents to perform a comprehensive
     analysis of a given code snippet. The workflow is as follows:
     1.  **Initial Detection:** Language and region tags are detected in parallel.
-    2.  **Code Cleaning:** Comments are removed from the code.
-    3.  **Product Categorization:** The relevant product is identified.
-    4.  **Evaluation:** A two-step process involving a detailed analysis
+    2.  **Validation:** The output of the initial detection is validated.
+    3.  **Code Cleaning:** Comments are removed from the code.
+    4.  **Product Categorization:** The relevant product is identified.
+    5.  **Evaluation:** A two-step process involving a detailed analysis
         followed by JSON formatting.
-    5.  **Result Processing:** The final output is assembled and cleaned.
+    6.  **Result Processing:** The final output is assembled and cleaned.
     """
+
+    initial_detection_agent: ParallelAgent
+    validation_agent: ValidationAgent
+    code_cleaning_agent: CodeCleaningAgent
+    product_categorization_agent: ProductCategorizationAgent
+    evaluation_agent: SequentialAgent
+    result_processor: ResultProcessingAgent
 
     def __init__(self, **kwargs: Any):
         """
@@ -304,19 +312,46 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         )
         evaluation_agent = self._create_evaluation_agent()
         result_processor = self._create_result_processing_agent()
-
-        # The orchestrator is a sequential agent that runs each sub-agent in order.
         super().__init__(
-            name=kwargs.get("name", "code_analyzer_orchestrator"),
-            sub_agents=[
-                initial_detection_agent,
-                validation_agent,
-                code_cleaning_agent,
-                product_categorization_agent,
-                evaluation_agent,
-                result_processor,
-            ],
+            initial_detection_agent=initial_detection_agent,
+            validation_agent=validation_agent,
+            code_cleaning_agent=code_cleaning_agent,
+            product_categorization_agent=product_categorization_agent,
+            evaluation_agent=evaluation_agent,
+            result_processor=result_processor,
+            **kwargs,
         )
+
+    async def _run_async_impl(
+        self, ctx: InvocationContext
+    ) -> AsyncGenerator[Event, None]:
+        """
+        Executes the orchestration logic.
+        """
+        async for event in self.initial_detection_agent.run_async(ctx):
+            if event.is_final_response():
+                break
+
+        async for event in self.validation_agent.run_async(ctx):
+            if event.is_final_response():
+                yield event
+                return
+
+        async for event in self.code_cleaning_agent.run_async(ctx):
+            if event.is_final_response():
+                break
+
+        async for event in self.product_categorization_agent.run_async(ctx):
+            if event.is_final_response():
+                break
+
+        async for event in self.evaluation_agent.run_async(ctx):
+            if event.is_final_response():
+                break
+
+        async for event in self.result_processor.run_async(ctx):
+            yield event
+
 
     def _create_initial_detection_agent(self) -> ParallelAgent:
         """

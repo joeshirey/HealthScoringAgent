@@ -13,22 +13,36 @@ from agentic_code_analyzer.orchestrator import CodeAnalyzerOrchestrator
 def mock_llm_agents(mocker):
     """Mocks the agents that interact with LLMs."""
     mock_code_cleaning = mocker.patch(
-        "agentic_code_analyzer.orchestrator.CodeCleaningAgent._run_async_impl"
+        "agentic_code_analyzer.orchestrator.CodeCleaningAgent", autospec=True
     )
     mock_initial_analysis = mocker.patch(
-        "agentic_code_analyzer.orchestrator.InitialAnalysisAgent._run_async_impl"
+        "agentic_code_analyzer.orchestrator.InitialAnalysisAgent", autospec=True
     )
     mock_json_formatting = mocker.patch(
-        "agentic_code_analyzer.orchestrator.JsonFormattingAgent._run_async_impl"
+        "agentic_code_analyzer.orchestrator.JsonFormattingAgent", autospec=True
     )
     mock_product_categorization = mocker.patch(
-        "agentic_code_analyzer.orchestrator.ProductCategorizationAgent._run_async_impl"
+        "agentic_code_analyzer.orchestrator.ProductCategorizationAgent", autospec=True
     )
+    mock_validation = mocker.patch(
+        "agentic_code_analyzer.orchestrator.ValidationAgent", autospec=True
+    )
+    mock_code_cleaning.return_value.parent_agent = None
+    mock_initial_analysis.return_value.parent_agent = None
+    mock_json_formatting.return_value.parent_agent = None
+    mock_product_categorization.return_value.parent_agent = None
+    mock_validation.return_value.parent_agent = None
+    # Make the validation agent pass
+    async def mock_validation_side_effect(*args, **kwargs):
+        if False:
+            yield
+    mock_validation.return_value.run_async.side_effect = mock_validation_side_effect
     return (
         mock_code_cleaning,
         mock_initial_analysis,
         mock_json_formatting,
         mock_product_categorization,
+        mock_validation,
     )
 
 
@@ -43,14 +57,18 @@ async def test_orchestrator_full_run(mock_llm_agents):
         mock_initial_analysis,
         mock_json_formatting,
         mock_product_categorization,
+        mock_validation,
     ) = mock_llm_agents
 
     # Define mock side effects for agents to update the session state
-    async def mock_initial_analysis_side_effect(ctx):
+    async def mock_initial_analysis_side_effect(*args, **kwargs):
+        ctx = args[0]
         ctx.session.state["initial_analysis_output"] = "This is a mock analysis."
-        yield MagicMock()
+        if False:
+            yield
 
-    async def mock_json_formatting_side_effect(ctx):
+    async def mock_json_formatting_side_effect(*args, **kwargs):
+        ctx = args[0]
         mock_assessment_output = {
             "overall_compliance_score": 85,
             "criteria_breakdown": [
@@ -73,20 +91,24 @@ async def test_orchestrator_full_run(mock_llm_agents):
         ctx.session.state["evaluation_review_agent_output"] = json.dumps(
             mock_assessment_output
         )
-        yield MagicMock()
+        if False:
+            yield
 
-    async def mock_product_cat_side_effect(ctx):
+    async def mock_product_cat_side_effect(*args, **kwargs):
+        ctx = args[0]
         ctx.session.state["product_name"] = "Mock Product"
         ctx.session.state["product_category"] = "Mock Category"
-        yield MagicMock()
+        if False:
+            yield
 
-    async def mock_code_cleaning_side_effect(ctx):
-        yield MagicMock()
+    async def mock_code_cleaning_side_effect(*args, **kwargs):
+        if False:
+            yield
 
-    mock_code_cleaning.side_effect = mock_code_cleaning_side_effect
-    mock_initial_analysis.side_effect = mock_initial_analysis_side_effect
-    mock_json_formatting.side_effect = mock_json_formatting_side_effect
-    mock_product_categorization.side_effect = mock_product_cat_side_effect
+    mock_code_cleaning.return_value.run_async.side_effect = mock_code_cleaning_side_effect
+    mock_initial_analysis.return_value.run_async.side_effect = mock_initial_analysis_side_effect
+    mock_json_formatting.return_value.run_async.side_effect = mock_json_formatting_side_effect
+    mock_product_categorization.return_value.run_async.side_effect = mock_product_cat_side_effect
 
     # 1. Setup the orchestrator and runner
     orchestrator = CodeAnalyzerOrchestrator(name="test_orchestrator")
