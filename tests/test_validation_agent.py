@@ -1,9 +1,10 @@
 import pytest
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.sessions import Session, BaseSessionService
 from agentic_code_analyzer.agents.validation_agent import ValidationAgent
 import json
+
 
 @pytest.mark.asyncio
 async def test_validation_agent_no_region_tags():
@@ -32,6 +33,7 @@ async def test_validation_agent_no_region_tags():
     assert events[0].turn_complete
     assert json.loads(events[0].content.parts[0].text) == {"error": "No Region Tags"}
 
+
 @pytest.mark.asyncio
 async def test_validation_agent_unsupported_language():
     """
@@ -57,7 +59,10 @@ async def test_validation_agent_unsupported_language():
     events = [event async for event in agent._run_async_impl(ctx)]
     assert len(events) == 1
     assert events[0].turn_complete
-    assert json.loads(events[0].content.parts[0].text) == {"error": "Unsupported language"}
+    assert json.loads(events[0].content.parts[0].text) == {
+        "error": "Unsupported language"
+    }
+
 
 @pytest.mark.asyncio
 async def test_validation_agent_success():

@@ -45,7 +45,9 @@ class ValidationAgent(BaseAgent):
             logger.error(f"[{self.name}] No region tags found.")
             yield Event(
                 author=self.name,
-                content=Content(parts=[Part(text=json.dumps({"error": "No Region Tags"}))]),
+                content=Content(
+                    parts=[Part(text=json.dumps({"error": "No Region Tags"}))]
+                ),
                 turn_complete=True,
             )
             return
