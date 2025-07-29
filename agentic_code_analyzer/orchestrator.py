@@ -36,6 +36,7 @@ from agentic_code_analyzer.agents.analysis.initial_analysis_agent import (
 from agentic_code_analyzer.agents.analysis.json_formatting_agent import (
     JsonFormattingAgent,
 )
+from agentic_code_analyzer.agents.validation_agent import ValidationAgent
 
 logger = logging.getLogger(__name__)
 
@@ -296,6 +297,7 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
         """
         # Factory methods are used to construct the sub-agents.
         initial_detection_agent = self._create_initial_detection_agent()
+        validation_agent = ValidationAgent(name="validation_agent")
         code_cleaning_agent = CodeCleaningAgent(name="code_cleaning_agent")
         product_categorization_agent = ProductCategorizationAgent(
             name="product_categorization_agent"
@@ -308,6 +310,7 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
             name=kwargs.get("name", "code_analyzer_orchestrator"),
             sub_agents=[
                 initial_detection_agent,
+                validation_agent,
                 code_cleaning_agent,
                 product_categorization_agent,
                 evaluation_agent,
