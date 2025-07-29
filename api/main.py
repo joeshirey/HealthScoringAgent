@@ -143,7 +143,16 @@ async def analyze_code(request: CodeRequest) -> FinalValidatedAnalysisWithHistor
                 detail="Failed to parse analysis JSON from the orchestrator.",
             )
 
-        # --- STAGE 2: Run the Validation Orchestrator ---
+        # --- STAGE 2: Check for errors before validation ---
+        if "error" in current_analysis_json:
+            logger.warning(
+                f"Analysis halted with error: {current_analysis_json['error']}"
+            )
+            return FinalValidatedAnalysisWithHistory(
+                analysis=current_analysis_json, validation_history=[]
+            )
+
+        # --- STAGE 3: Run the Validation Orchestrator ---
         validation_result = await _run_validation(
             session_service=session_service,
             session_id=session_id,
@@ -159,7 +168,7 @@ async def analyze_code(request: CodeRequest) -> FinalValidatedAnalysisWithHistor
             )
         )
 
-        # --- STAGE 3: Check the validation score ---
+        # --- STAGE 4: Check the validation score ---
         if validation_result.validation_score > 7:
             logger.info(
                 f"Validation passed with score {validation_result.validation_score}. Exiting loop."
