@@ -32,10 +32,10 @@ FILE_EXTENSION_MAP: Dict[str, str] = {
     ".hpp": "C++",
     ".php": "PHP",
     ".tf": "Terraform",
-    ".js": "Javascript",
-    ".ts": "Javascript",  # TypeScript is normalized to Javascript.
-    ".jsx": "Javascript",
-    ".tsx": "Javascript",
+    ".js": "JavaScript",
+    ".ts": "JavaScript",  # TypeScript is normalized to Javascript.
+    ".jsx": "JavaScript",
+    ".tsx": "JavaScript",
 }
 
 # This dictionary contains regular expressions for content-based language

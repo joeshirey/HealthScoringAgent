@@ -52,8 +52,6 @@ async def test_orchestrator_full_run(mock_llm_agents):
     async def mock_initial_analysis_side_effect(*args, **kwargs):
         ctx = args[0]
         ctx.session.state["initial_analysis_output"] = "This is a mock analysis."
-        if False:
-            yield
 
     async def mock_json_formatting_side_effect(*args, **kwargs):
         ctx = args[0]
@@ -79,19 +77,14 @@ async def test_orchestrator_full_run(mock_llm_agents):
         ctx.session.state["evaluation_review_agent_output"] = json.dumps(
             mock_assessment_output
         )
-        if False:
-            yield
 
     async def mock_product_cat_side_effect(*args, **kwargs):
         ctx = args[0]
         ctx.session.state["product_name"] = "Mock Product"
         ctx.session.state["product_category"] = "Mock Category"
-        if False:
-            yield
 
     async def mock_code_cleaning_side_effect(*args, **kwargs):
-        if False:
-            yield
+        pass
 
     mock_code_cleaning.return_value.run_async.side_effect = (
         mock_code_cleaning_side_effect
