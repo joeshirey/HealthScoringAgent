@@ -1,6 +1,5 @@
 import pytest
 import json
-from unittest.mock import MagicMock
 
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
@@ -32,10 +31,12 @@ def mock_llm_agents(mocker):
     mock_json_formatting.return_value.parent_agent = None
     mock_product_categorization.return_value.parent_agent = None
     mock_validation.return_value.parent_agent = None
+
     # Make the validation agent pass
     async def mock_validation_side_effect(*args, **kwargs):
         if False:
             yield
+
     mock_validation.return_value.run_async.side_effect = mock_validation_side_effect
     return (
         mock_code_cleaning,
@@ -105,10 +106,18 @@ async def test_orchestrator_full_run(mock_llm_agents):
         if False:
             yield
 
-    mock_code_cleaning.return_value.run_async.side_effect = mock_code_cleaning_side_effect
-    mock_initial_analysis.return_value.run_async.side_effect = mock_initial_analysis_side_effect
-    mock_json_formatting.return_value.run_async.side_effect = mock_json_formatting_side_effect
-    mock_product_categorization.return_value.run_async.side_effect = mock_product_cat_side_effect
+    mock_code_cleaning.return_value.run_async.side_effect = (
+        mock_code_cleaning_side_effect
+    )
+    mock_initial_analysis.return_value.run_async.side_effect = (
+        mock_initial_analysis_side_effect
+    )
+    mock_json_formatting.return_value.run_async.side_effect = (
+        mock_json_formatting_side_effect
+    )
+    mock_product_categorization.return_value.run_async.side_effect = (
+        mock_product_cat_side_effect
+    )
 
     # 1. Setup the orchestrator and runner
     orchestrator = CodeAnalyzerOrchestrator(name="test_orchestrator")

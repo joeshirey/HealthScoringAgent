@@ -352,7 +352,6 @@ class CodeAnalyzerOrchestrator(BaseAgent):
         async for event in self.result_processor.run_async(ctx):
             yield event
 
-
     def _create_initial_detection_agent(self) -> ParallelAgent:
         """
         Creates the parallel agent for the initial detection phase.
