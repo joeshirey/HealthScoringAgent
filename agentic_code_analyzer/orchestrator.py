@@ -36,9 +36,22 @@ from agentic_code_analyzer.agents.analysis.initial_analysis_agent import (
 from agentic_code_analyzer.agents.analysis.json_formatting_agent import (
     JsonFormattingAgent,
 )
-from agentic_code_analyzer.agents.validation_agent import ValidationAgent
 
 logger = logging.getLogger(__name__)
+
+
+SUPPORTED_LANGUAGES: List[str] = [
+    "C#",
+    "C++",
+    "Go",
+    "Java",
+    "Javascript",
+    "PHP",
+    "Python",
+    "Ruby",
+    "Rust",
+    "Terraform",
+]
 
 
 class ResultProcessingAgent(BaseAgent):
@@ -290,7 +303,6 @@ class CodeAnalyzerOrchestrator(BaseAgent):
     """
 
     initial_detection_agent: ParallelAgent
-    validation_agent: ValidationAgent
     code_cleaning_agent: CodeCleaningAgent
     product_categorization_agent: ProductCategorizationAgent
     evaluation_agent: SequentialAgent
@@ -305,7 +317,6 @@ class CodeAnalyzerOrchestrator(BaseAgent):
         """
         # Factory methods are used to construct the sub-agents.
         initial_detection_agent = self._create_initial_detection_agent()
-        validation_agent = ValidationAgent(name="validation_agent")
         code_cleaning_agent = CodeCleaningAgent(name="code_cleaning_agent")
         product_categorization_agent = ProductCategorizationAgent(
             name="product_categorization_agent"
@@ -314,7 +325,6 @@ class CodeAnalyzerOrchestrator(BaseAgent):
         result_processor = self._create_result_processing_agent()
         super().__init__(
             initial_detection_agent=initial_detection_agent,
-            validation_agent=validation_agent,
             code_cleaning_agent=code_cleaning_agent,
             product_categorization_agent=product_categorization_agent,
             evaluation_agent=evaluation_agent,
@@ -332,10 +342,29 @@ class CodeAnalyzerOrchestrator(BaseAgent):
             if event.is_final_response():
                 break
 
-        async for event in self.validation_agent.run_async(ctx):
-            if event.is_final_response():
-                yield event
-                return
+        region_tags = ctx.session.state.get("region_tag_extraction_agent_output")
+        if not region_tags:
+            logger.error(f"[{self.name}] No region tags found.")
+            yield Event(
+                author=self.name,
+                content=Content(
+                    parts=[Part(text=json.dumps({"error": "No Region Tags"}))]
+                ),
+                turn_complete=True,
+            )
+            return
+
+        language = ctx.session.state.get("language_detection_agent_output")
+        if language not in SUPPORTED_LANGUAGES:
+            logger.error(f"[{self.name}] Unsupported language: {language}")
+            yield Event(
+                author=self.name,
+                content=Content(
+                    parts=[Part(text=json.dumps({"error": "Unsupported language"}))]
+                ),
+                turn_complete=True,
+            )
+            return
 
         async for event in self.code_cleaning_agent.run_async(ctx):
             if event.is_final_response():

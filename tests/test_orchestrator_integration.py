@@ -23,27 +23,15 @@ def mock_llm_agents(mocker):
     mock_product_categorization = mocker.patch(
         "agentic_code_analyzer.orchestrator.ProductCategorizationAgent", autospec=True
     )
-    mock_validation = mocker.patch(
-        "agentic_code_analyzer.orchestrator.ValidationAgent", autospec=True
-    )
     mock_code_cleaning.return_value.parent_agent = None
     mock_initial_analysis.return_value.parent_agent = None
     mock_json_formatting.return_value.parent_agent = None
     mock_product_categorization.return_value.parent_agent = None
-    mock_validation.return_value.parent_agent = None
-
-    # Make the validation agent pass
-    async def mock_validation_side_effect(*args, **kwargs):
-        if False:
-            yield
-
-    mock_validation.return_value.run_async.side_effect = mock_validation_side_effect
     return (
         mock_code_cleaning,
         mock_initial_analysis,
         mock_json_formatting,
         mock_product_categorization,
-        mock_validation,
     )
 
 
@@ -58,7 +46,6 @@ async def test_orchestrator_full_run(mock_llm_agents):
         mock_initial_analysis,
         mock_json_formatting,
         mock_product_categorization,
-        mock_validation,
     ) = mock_llm_agents
 
     # Define mock side effects for agents to update the session state
@@ -192,3 +179,112 @@ async def test_orchestrator_full_run(mock_llm_agents):
 
     assert api_crit["recommendations_for_llm_fix"] == ["rec_A"]
     assert lang_crit["recommendations_for_llm_fix"] == ["rec_B"]
+
+
+@pytest.mark.asyncio
+async def test_orchestrator_no_region_tags(mock_llm_agents):
+    """
+    Tests that the orchestrator halts and returns an error when no region tags are found.
+    """
+    orchestrator = CodeAnalyzerOrchestrator(name="test_orchestrator")
+    session_service = InMemorySessionService()
+
+    code_snippet = "import os"
+
+    initial_state = {
+        "code_snippet": code_snippet,
+        "github_link": "http://mock.link",
+    }
+
+    await session_service.create_session(
+        app_name="test_app",
+        user_id="test_user",
+        session_id="test_session",
+        state=initial_state,
+    )
+
+    runner = Runner(
+        agent=orchestrator,
+        app_name="test_app",
+        session_service=session_service,
+    )
+
+    final_response = ""
+    async for event in runner.run_async(
+        user_id="test_user",
+        session_id="test_session",
+        new_message=Content(parts=[Part(text=code_snippet)]),
+    ):
+        if (
+            event.is_final_response()
+            and event.content
+            and event.content.parts
+            and event.content.parts[0].text
+        ):
+            final_response = event.content.parts[0].text
+
+    assert final_response, "Final response should not be empty"
+    final_data = json.loads(final_response)
+    assert final_data == {"error": "No Region Tags"}
+
+
+@pytest.mark.asyncio
+async def test_orchestrator_unsupported_language(mock_llm_agents, mocker):
+    """
+    Tests that the orchestrator halts and returns an error for an unsupported language.
+    """
+    mocker.patch(
+        "agentic_code_analyzer.orchestrator.DeterministicLanguageDetectionAgent.run_async"
+    )
+    orchestrator = CodeAnalyzerOrchestrator(name="test_orchestrator")
+    session_service = InMemorySessionService()
+
+    code_snippet = "# [START some_tag]\n" "import os" "# [END some_tag]"
+
+    initial_state = {
+        "code_snippet": code_snippet,
+        "github_link": "http://mock.link",
+    }
+
+    await session_service.create_session(
+        app_name="test_app",
+        user_id="test_user",
+        session_id="test_session",
+        state=initial_state,
+    )
+
+    # Manually set the language to an unsupported one
+    session = await session_service.get_session(
+        app_name="test_app", user_id="test_user", session_id="test_session"
+    )
+    session.state["language_detection_agent_output"] = "Cobol"
+    await session_service.create_session(
+        app_name="test_app",
+        user_id="test_user",
+        session_id="test_session_unsupported_language",
+        state=session.state,
+    )
+
+    runner = Runner(
+        agent=orchestrator,
+        app_name="test_app",
+        session_service=session_service,
+    )
+
+    final_response = ""
+    async for event in runner.run_async(
+        user_id="test_user",
+        session_id="test_session_unsupported_language",
+        new_message=Content(parts=[Part(text=code_snippet)]),
+    ):
+        if (
+            event.is_final_response()
+            and event.content
+            and event.content.parts
+            and event.content.parts[0].text
+        ):
+            final_response = event.content.parts[0].text
+
+    assert final_response, "Final response should not be empty"
+    final_data = json.loads(final_response)
+    assert final_data == {"error": "Unsupported language"}
