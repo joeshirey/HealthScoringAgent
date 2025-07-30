@@ -121,8 +121,11 @@ Follow these instructions to set up and run the Health Scoring Agent locally.
 ### Prerequisites
 
 -   **Python 3.12 or higher.**
--   **A Google Cloud project** with the **Vertex AI API enabled**.
--   **A Google AI API Key** for authenticating requests.
+-   **Google Cloud SDK (`gcloud`)**: Required for deploying to Google Cloud.
+-   **A Google Cloud Project**: Required for deployment, with the **Vertex AI API** enabled.
+-   **Authentication**:
+    -   For **local development**, a Google AI API Key is the simplest way to authenticate.
+    -   For **deployment to Google Cloud**, the application uses Application Default Credentials (ADC), so the service account will need the appropriate IAM roles.
 
 ### Installation and Setup
 
@@ -153,47 +156,71 @@ Follow these instructions to set up and run the Health Scoring Agent locally.
     ```
     *The `-e` flag installs the project in "editable" mode, which is useful for development.*
 
-4.  **Set up environment variables:**
+4.  **Set up environment variables for Local Development:**
 
-    The application requires API keys for Google AI services.
+    For local development, the application is configured to use a Google AI API key.
 
     ```bash
     # Copy the sample environment file to a new .env file
     cp .env.sample .env
     ```
 
-    Now, open the `.env` file in a text editor and add your credentials and configuration:
+    Now, open the `.env` file in a text editor and add your credentials. The other variables are pre-configured for a standard setup.
 
     ```env
-    # Your Google AI API Key
+    # For local development, set your Google AI API Key
     GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
 
-    # The model names for the different Gemini models
+    # The rest of the variables are primarily for Cloud Run deployment
+    # but are included here for completeness.
+    GOOGLE_CLOUD_PROJECT="your-project-id"
+    GOOGLE_CLOUD_LOCATION="us-central1"
+    GOOGLE_GENAI_USE_VERTEXAI="true"
     GEMINI_PRO_MODEL="gemini-2.5-pro"
+    GEMINI_FLASH_MODEL="gemini-2.5-flash"
     GEMINI_FLASH_LITE_MODEL="gemini-2.5-flash-lite"
-
-    # The maximum number of times the validation loop can run
     MAX_VALIDATION_LOOPS=3
     ```
 
 5.  **Run the application:**
 
-    The application is served using `uvicorn`.
+    The application is served using `uvicorn`. The `Dockerfile` is configured to run on port `8080` to match Cloud Run's default.
 
     ```bash
-    uvicorn api.main:app --host 0.0.0.0 --port 8090
+    uvicorn api.main:app --host 0.0.0.0 --port 8080
     ```
 
-    The API will now be available at `http://0.0.0.0:8090`, and the web interface at `http://0.0.0.0:8090/ui`.
+    The API will now be available at `http://0.0.0.0:8080`, and the web interface at `http://0.0.0.0:8080/ui`.
+
+## ☁️ Deployment
+
+This application is designed to be deployed to **Google Cloud Run** using an automated CI/CD pipeline with **Cloud Build**.
+
+The `cloudbuild.yaml` file in the root of the repository defines all the necessary steps to build the Docker container, push it to Artifact Registry, and deploy it to Cloud Run.
+
+For detailed, step-by-step instructions on how to set up your Google Cloud project and run the deployment, please see the **[DEPLOYMENT.md](DEPLOYMENT.md)** file.
 
 ## ⚙️ Configuration
 
-The application can be configured using environment variables. The following variables are available:
+The application is configured via environment variables.
 
--   `GEMINI_API_KEY`: Your Google AI API Key.
+### Local Development (`.env` file)
+
+For local development, create a `.env` file (by copying `.env.sample`) and set the following:
+
+-   `GEMINI_API_KEY`: **Required.** Your Google AI API Key for authentication.
+
+### Cloud Run Deployment (`cloudbuild.yaml`)
+
+For deployment, the following environment variables are set directly in the `cloudbuild.yaml` file and passed to the Cloud Run service. You can edit the `cloudbuild.yaml` or provide substitutions during the build process to change these values.
+
+-   `GOOGLE_CLOUD_PROJECT`: Your Google Cloud project ID.
+-   `GOOGLE_CLOUD_LOCATION`: The region where your service is deployed (e.g., `us-central1`).
+-   `GOOGLE_GENAI_USE_VERTEXAI`: Set to `"true"` to use the Vertex AI backend, which is recommended for production.
 -   `GEMINI_PRO_MODEL`: The name of the Gemini Pro model to use.
+-   `GEMINI_FLASH_MODEL`: The name of the Gemini Flash model to use.
 -   `GEMINI_FLASH_LITE_MODEL`: The name of the Gemini Flash Lite model to use.
--   `MAX_VALIDATION_LOOPS`: The maximum number of times the validation loop can run.
+-   `MAX_VALIDATION_LOOPS`: The maximum number of times the self-validation loop can run.
 -   `GITHUB_FETCH_TIMEOUT`: The timeout in seconds for fetching code from GitHub.
 
 ## ↔️ API Reference
