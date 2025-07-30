@@ -382,7 +382,8 @@ async def _fetch_code_from_github(github_link: str) -> str:
             "github.com", "raw.githubusercontent.com"
         ).replace("/blob/", "/")
 
-        async with httpx.AsyncClient() as client:
+        timeout = float(os.environ.get("GITHUB_FETCH_TIMEOUT", 30.0))
+        async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.get(raw_url)
             response.raise_for_status()  # Raise an exception for bad status codes.
             code = response.text
