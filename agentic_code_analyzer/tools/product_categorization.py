@@ -163,6 +163,7 @@ def _categorize_with_llm(
 
         # Extract the JSON from the response, even if it's in a markdown block.
         text_to_load = response.text.strip() if response.text else ""
+        logger.info(f"LLM response for categorization: '{text_to_load}'")
         match = re.search(r"```json\s*({.*?})\s*```", text_to_load, re.DOTALL)
         if match:
             text_to_load = match.group(1)

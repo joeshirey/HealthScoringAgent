@@ -1,87 +1,377 @@
-# A list of all products, used for keyword matching and categorization.
-- category: "AI and Machine Learning"
+- category: AI and ML
   products:
-    - product: "Vertex AI Search"
-      keywords: ["vertex-ai-search", "retail-search"]
-    - product: "Vertex AI"
-      keywords: ["vertex-ai", "aiplatform"]
-    - product: "Translation"
-      keywords: ["translation"]
-    - product: "Natural Language"
-      keywords: ["language"]
-    - product: "Vision"
-      keywords: ["vision"]
-    - product: "Speech-to-Text"
-      keywords: ["speech"]
-    - product: "Text-to-Speech"
-      keywords: ["text-to-speech"]
-    - product: "AutoML"
-      keywords: ["automl"]
-- category: "Compute"
+    - product: Cloud TPU
+      keywords: [tpu]
+    - product: Colab Enterprise
+      keywords: []
+    - product: Deep Learning Containers
+      keywords: []
+    - product: Deep Learning VM
+      keywords: []
+    - product: DocAI
+      keywords: [document-ai, documentai, document-warehouse, contentwarehouse] # Matched to Document AI
+    - product: Enterprise Knowledge Graph
+      keywords: [enterpriseknowledgegraph]
+    - product: Immersive Stream for XR
+      keywords: []
+    - product: Speech-to-Text
+      keywords: [speech]
+    - product: TensorFlow Enterprise
+      keywords: [tensorflow]
+    - product: Text-to-Speech
+      keywords: [tts, texttospeech]
+    - product: Translation
+      keywords: [translate, mediatranslation] # Matched to Translation API
+    - product: Vertex AI
+      keywords: [vertex-ai, vertexai, aiplatform, gemini, imagen, gemma, cmle, genai, discoveryengine, datalabeling, automl ]
+    - product: Vertex AI Vision
+      keywords: [vision, visualinspection] # Matched to Vision AI
+    - product: Vertex AI Workbench
+      keywords: []
+    - product: Vision API
+      keywords: []
+    - product: Dialogflow
+      keywords: [dialogflow]
+    - product: Natural Language API
+      keywords: [language, naturallanguage]
+    - product: Contact Center AI
+      keywords: [contact-center-ai, contactcenterinsights]
+
+- category: App development
   products:
-    - product: "Compute Engine"
-      keywords: ["compute"]
-    - product: "Cloud Functions"
-      keywords: ["functions"]
-    - product: "Cloud Run"
-      keywords: ["run"]
-- category: "Containers"
+    - product: API Gateway
+      keywords: []
+    - product: Apigee
+      keywords: [apigee]
+    - product: App Hub
+      keywords: [apphub]
+    - product: Application Integration
+      keywords: []
+    - product: Artifact Analysis
+      keywords: [container-analysis, containeranalysis, binaryauthorization, grafeas] # Matched to Container Analysis
+    - product: Cloud Build
+      keywords: [cloud-build, cloudbuild]
+    - product: Cloud Code
+      keywords: []
+    - product: Cloud Deploy
+      keywords: [cloud-deploy]
+    - product: Cloud Scheduler
+      keywords: [cloud-scheduler, cloudscheduler]
+    - product: Cloud Shell
+      keywords: [cloud-shell]
+    - product: Cloud Tasks
+      keywords: [cloud-tasks, tasks]
+    - product: Cloud Workstations
+      keywords: []
+    - product: Developer Connect
+      keywords: [developerconnect]
+    - product: Eventarc
+      keywords: [eventarc]
+    - product: gcloud CLI
+      keywords: []
+    - product: Integration Connectors
+      keywords: []
+    - product: Pub/Sub
+      keywords: [pubsub, kafka]
+    - product: Secure Source Manager
+      keywords: []
+    - product: Service Infrastructure
+      keywords: [servicecontrol]
+    - product: Software supply chain security
+      keywords: []
+    - product: Tools for Eclipse
+      keywords: []
+    - product: Tools for PowerShell
+      keywords: []
+    - product: Tools for Visual Studio
+      keywords: []
+    - product: Workflows
+      keywords: [workflows]
+    - product: Cloud Debugger
+      keywords: [explicit_debugger, debugger, stackdriver]
+    - product: Endpoints
+      keywords: [endpoints]
+    - product: Artifact Registry
+      keywords: [artifact-registry, artifactregistry]
+
+- category: Compute
   products:
-    - product: "Google Kubernetes Engine"
-      keywords: ["container"]
-- category: "Databases"
+    - product: App Engine
+      keywords: [appengine, \bgae\b, flexible]
+    - product: Blockchain Node Engine
+      keywords: []
+    - product: Blockchain RPC
+      keywords: []
+    - product: Cloud Run
+      keywords: [run]
+    - product: Google Kubernetes Engine (GKE)
+      keywords: [gke, kubernetes-engine, container, k8s, connectgateway]
+    - product: AI Hypercomputer
+      keywords: []
+    - product: Batch
+      keywords: [batch]
+    - product: Capacity Planner
+      keywords: []
+    - product: Cluster toolkit
+      keywords: []
+    - product: Compute Engine
+      keywords: [compute, \bgce\b, vm_instance]
+    - product: Migrate to Containers
+      keywords: []
+    - product: Migrate to VMs
+      keywords: []
+    - product: Migration Center
+      keywords: []
+    - product: Shielded VMs
+      keywords: []
+    - product: VM Manager
+      keywords: []
+    - product: VMware Engine
+      keywords: [vmwareengine]
+    - product: Workload Manager
+      keywords: []
+    - product: Anthos
+      keywords: [anthos, servicemesh, gkeonaws]
+    - product: Cloud Functions
+      keywords: [functions]
+
+- category: Cross-product tools
   products:
-    - product: "Cloud SQL"
-      keywords: ["cloud-sql"]
-    - product: "Spanner"
-      keywords: ["spanner"]
-    - product: "Firestore"
-      keywords: ["firestore"]
-    - product: "Memorystore"
-      keywords: ["memorystore"]
-    - product: "Bigtable"
-      keywords: ["bigtable"]
-- category: "Data Analytics"
+    - product: Cloud Billing
+      keywords: [billing]
+    - product: Cloud Identity
+      keywords: []
+    - product: Cloud Quotas
+      keywords: []
+    - product: Config Connector
+      keywords: []
+    - product: Deployment Manager
+      keywords: [deploymentmanager]
+    - product: Identity Platform
+      keywords: []
+    - product: Infra Manager
+      keywords: []
+    - product: Recommender
+      keywords: []
+    - product: Service Catalog
+      keywords: []
+    - product: Service Usage
+      keywords: [serviceusage]
+
+- category: Data analytics and pipelines
   products:
-    - product: "BigQuery"
-      keywords: ["bigquery"]
-    - product: "BigQuery Migration"
-      keywords: ["bigquerymigration"]
-    - product: "BigQuery Data Transfer"
-      keywords: ["bigquerydatatransfer"]
-    - product: "BigQuery Reservation"
-      keywords: ["bigqueryreservation"]
-    - product: "BigQuery Connection"
-      keywords: ["bigqueryconnection"]
-    - product: "Dataflow"
-      keywords: ["dataflow"]
-    - product: "Dataproc"
-      keywords: ["dataproc"]
-    - product: "Pub/Sub"
-      keywords: ["pubsub"]
-- category: "Developer Tools"
+    - product: BigQuery
+      keywords: [bigquery, bqml, bigquery-migration, bigquery-data-transfer, bigquery-reservatio, bigquery-connection]
+    - product: Blockchain Analytics
+      keywords: []
+    - product: Cloud Composer
+      keywords: [composer]
+    - product: Cloud Data Fusion
+      keywords: []
+    - product: Dataflow
+      keywords: [dataflow]
+    - product: Dataform
+      keywords: []
+    - product: Dataplex
+      keywords: [dataplex, datacatalog, data_catalog]
+    - product: Dataproc
+      keywords: [dataproc]
+    - product: Dataproc Serverless
+      keywords: []
+    - product: Datastream
+      keywords: [datastream]
+    - product: Looker
+      keywords: [looker]
+    - product: BigLake
+      keywords: [biglake]
+
+- category: Databases
   products:
-    - product: "Cloud Build"
-      keywords: ["cloudbuild"]
-- category: "Networking"
+    - product: AlloyDB for PostgreSQL
+      keywords: [alloydb] # Matched to AlloyDB
+    - product: Bigtable
+      keywords: [bigtable]
+    - product: Cloud SQL
+      keywords: [cloud-sql, cloudsql, cloud_sql]
+    - product: Database Migration Service
+      keywords: [clouddms, oracle]
+    - product: Firestore
+      keywords: [firestore, datastore, firebase]
+    - product: Memorystore for Memcached
+      keywords: [memorystore, memstore] # Matched to Memorystore
+    - product: Spanner
+      keywords: [spanner]
+    - product: Managed Microsoft AD
+      keywords: []
+
+- category: Industry solutions
   products:
-    - product: "Virtual Private Cloud"
-      keywords: ["vpc"]
-    - product: "Cloud DNS"
-      keywords: ["dns"]
-    - product: "Media CDN"
-      keywords: ["mediacdn"]
-- category: "Security"
+    - product: Anti Money Laundering AI (AML AI)
+      keywords: [aml-ai]
+    - product: Healthcare Data Engine
+      keywords: [healthcare]
+    - product: Talent Solutions
+      keywords: [jobs, talent] # Matched to Talent Solution
+    - product: Telecom Network Automation
+      keywords: []
+    - product: Telecom Subscriber Insights API
+      keywords: []
+    - product: Vertex AI Search for retail
+      keywords: [retail]
+
+- category: Networking
   products:
-    - product: "Secret Manager"
-      keywords: ["secretmanager"]
-- category: "Storage"
+    - product: Cloud CDN
+      keywords: [cdn]
+    - product: Cloud DNS
+      keywords: [dns]
+    - product: Cloud Intrusion Detection System
+      keywords: []
+    - product: Cloud Interconnect
+      keywords: []
+    - product: Cloud Load Balancing
+      keywords: [lb, cloudloadbalancing]
+    - product: Cloud NAT
+      keywords: [cloud-nat]
+    - product: Cloud Next Generation Firewall (Cloud NGFW)
+      keywords: []
+    - product: Cloud Router
+      keywords: [cloud-router]
+    - product: Cloud Service Mesh
+      keywords: []
+    - product: Cloud VPN
+      keywords: [vpn]
+    - product: Google Cloud Armor
+      keywords: []
+    - product: Media CDN
+      keywords: [media-cdn, mediacdn, video, stitcher, videostitcher, transcoder, livestream]
+    - product: Network Connectivity Center
+      keywords: [network-connectivity, network_security, networksecurity, network_connectivity, networkmanagement]
+    - product: Network Intelligence Center
+      keywords: []
+    - product: Network Service Tiers
+      keywords: [network_service_tiers]
+    - product: Secure Web Proxy
+      keywords: []
+    - product: Service Extensions
+      keywords: [service_extensions, serviceextensions]
+    - product: Virtual Private Cloud (VPC)
+      keywords: [vpc]
+    - product: VPC Service Controls
+      keywords: []
+    - product: Service Directory
+      keywords: [service-directory, servicedirectory]
+    - product: Traffic Director
+      keywords: [traffic-director, traffic_director, trafficdirector]
+
+- category: Observability and monitoring
   products:
-    - product: "Cloud Storage"
-      keywords: ["storage"]
-    - product: "Storage Transfer Service"
-      keywords: ["storagetransfer"]
-    - product: "Storage Insights"
-      keywords: ["storageinsights"]
-    - product: "Storage Control"
-      keywords: ["storagecontrol"]
+    - product: Error Reporting
+      keywords: [error-reporting, errorreporting, error_reporting]
+    - product: Logging
+      keywords: [logging] # Matched to Cloud Logging
+    - product: Monitoring
+      keywords: [monitoring] # Matched to Cloud Monitoring
+    - product: Profiler
+      keywords: [profiler] # Matched to Cloud Profiler
+    - product: Trace
+      keywords: [trace, opencensus, opentelemetry] # Matched to Cloud Trace
+
+- category: Security
+  products:
+    - product: Access Context Manager
+      keywords: [accesscontextmanager]
+    - product: Access Transparency
+      keywords: []
+    - product: Advisory Notifications
+      keywords: [advisorynotifications]
+    - product: Assured OSS
+      keywords: []
+    - product: Binary Authorization
+      keywords: []
+    - product: Certificate Authority
+      keywords: [privateca] # Matched to Private Certificate Authority
+    - product: Certificate Manager
+      keywords: [ertificate_manager, certificatemanager]
+    - product: Chrome Enterprise Premium
+      keywords: []
+    - product: Cloud Asset Inventory
+      keywords: [asset]
+    - product: Cloud KMS
+      keywords: [kms] # Matched to Key Management Service (KMS)
+    - product: Confidential VM
+      keywords: [confidentialcomputing]
+    - product: Endpoint Verification
+      keywords: []
+    - product: Google SecOps
+      keywords: [chronicle]
+    - product: Identity and Access Management (IAM)
+      keywords: [iam, auth, apikeys, managedidentities]
+    - product: Identity-Aware Proxy (IAP)
+      keywords: [iap]
+    - product: Policy Intelligence
+      keywords: []
+    - product: reCAPTCHA
+      keywords: [recaptcha] # Matched to reCAPTCHA Enterprise
+    - product: Resource Manager
+      keywords: [resourcemanager]
+    - product: Secret Manager
+      keywords: [secret-manager, secretmanager, parametermanager]
+    - product: Security Command Center
+      keywords: [security-command-center, securitycenter, optimization]
+    - product: Sensitive Data Protection
+      keywords: [dlp]
+    - product: Service Health
+      keywords: []
+    - product: Web Risk
+      keywords: [webrisk]
+    - product: Model Armor
+      keywords: [model-armor, modelarmor]
+    - product: Access Approval
+      keywords: [accessapproval]
+    - product: Web Security Scanner
+      keywords: [web-security-scanner, websecurityscanner]
+
+- category: Storage
+  products:
+    - product: Backup and DR Service
+      keywords: [backupdr]
+    - product: Cloud Storage
+      keywords: [storage]
+    - product: Filestore
+      keywords: [filestore, lustre]
+    - product: Persistent Disk
+      keywords: [persistent-disk]
+    - product: Storage Transfer Service
+      keywords: [storagetransfer]
+    - product: Storage Insights
+      keywords: [storage-insights]
+    - product: Storage Control
+      keywords: [storage-control]
+
+- category: Other
+  products:
+    - product: Google Analytics Data API
+      keywords: [analyticsdata]
+    - product: Python
+      keywords: [getting-started-python]
+    - product: Maps
+      keywords: [routeoptimization]
+    - product: IoT
+      keywords: [iot]
+    - product: Java
+      keywords: [getting-started-java]
+    - product: PHP
+      keywords: [getting-started-php]
+    - product: Ruby
+      keywords: [getting-started-ruby, ruby-docs-samples/blob/main/getting-started]
+    - product: Go
+      keywords: [getting-started-go, golang-samples/blob/main/getting-started]
+    - product: Node.js
+      keywords: [nodejs-getting-started]
+    - product: TypeScript
+      keywords: [getting-started-typescript]
+    - product: Android
+      keywords: [android]
+    - product: C#
+      keywords: [getting-started-dotnet]

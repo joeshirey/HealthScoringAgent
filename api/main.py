@@ -7,6 +7,7 @@ validating evaluations, and serving a simple web UI.
 import json
 import logging
 import os
+import uuid
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
@@ -41,6 +42,11 @@ app = FastAPI(
     description="An API for analyzing and evaluating code samples for quality, correctness, and adherence to best practices.",
     version="1.0.0",
 )
+
+# --- Global Services ---
+# Use a single, shared session service for the entire application lifecycle.
+session_service = InMemorySessionService()
+
 
 # --- Pydantic Request Models ---
 
@@ -90,15 +96,24 @@ async def analyze_code(request: CodeRequest) -> FinalValidatedAnalysisWithHistor
         A `FinalValidatedAnalysisWithHistory` object containing the final
         analysis and a history of all validation attempts.
     """
+    # Generate a unique session ID for each analysis request to ensure isolation.
+    session_id = str(uuid.uuid4())
+    logger.info(f"Starting analysis for session_id: {session_id}")
+    logger.info(f"Received request to analyze GitHub link: {request.github_link}")
+
     max_loops = int(os.environ.get("MAX_VALIDATION_LOOPS", 5))
     validation_history: List[ValidationAttempt] = []
     current_analysis_json: Dict[str, Any] = {}
     feedback_for_next_loop = ""
-    session_service = InMemorySessionService()
-    session_id = "iterative_session"
 
     for i in range(max_loops):
-        logger.info(f"--- Starting Analysis Iteration {i + 1}/{max_loops} ---")
+        logger.info(
+            f"--- Starting Analysis Iteration {i + 1}/{max_loops} for session_id: {session_id} ---"
+        )
+        if request.github_link:
+            logger.info(
+                f"Analyzing GitHub link: {request.github_link} for session_id: {session_id}"
+            )
 
         # --- STAGE 1: Run the main Code Analyzer ---
         analysis_orchestrator = CodeAnalyzerOrchestrator(
@@ -138,6 +153,10 @@ async def analyze_code(request: CodeRequest) -> FinalValidatedAnalysisWithHistor
         try:
             current_analysis_json = json.loads(final_response)
         except json.JSONDecodeError:
+            logger.error(
+                f"Failed to parse analysis JSON from orchestrator for session_id: {session_id}",
+                exc_info=True,
+            )
             raise HTTPException(
                 status_code=500,
                 detail="Failed to parse analysis JSON from the orchestrator.",
@@ -147,7 +166,8 @@ async def analyze_code(request: CodeRequest) -> FinalValidatedAnalysisWithHistor
         # we don't need to validate it. We can exit the loop immediately.
         if "error" in current_analysis_json:
             logger.warning(
-                f"Analysis halted early with error: {current_analysis_json['error']}. "
+                f"Analysis halted early with error for session_id: {session_id}. "
+                f"Error: {current_analysis_json['error']}. "
                 "Skipping validation and exiting loop."
             )
             # Create a mock validation attempt to record the error.
@@ -163,7 +183,6 @@ async def analyze_code(request: CodeRequest) -> FinalValidatedAnalysisWithHistor
         # --- STAGE 2: Run the Validation Orchestrator ---
 
         validation_result = await _run_validation(
-            session_service=session_service,
             session_id=session_id,
             code=request.code,
             evaluation=current_analysis_json,
@@ -180,25 +199,32 @@ async def analyze_code(request: CodeRequest) -> FinalValidatedAnalysisWithHistor
         # --- STAGE 4: Check the validation score ---
         if validation_result.validation_score > 7:
             logger.info(
-                f"Validation passed with score {validation_result.validation_score}. Exiting loop."
+                f"Validation passed for session_id: {session_id} with score "
+                f"{validation_result.validation_score}. Exiting loop."
             )
             break  # Exit the loop if the analysis is good enough.
         else:
             logger.warning(
-                f"Validation failed with score {validation_result.validation_score}. Preparing for re-evaluation."
+                f"Validation failed for session_id: {session_id} with score "
+                f"{validation_result.validation_score}. Preparing for re-evaluation."
             )
             feedback_for_next_loop = validation_result.reasoning
             if i == max_loops - 1:
                 logger.warning(
-                    "Max validation loops reached. Returning final result regardless of score."
+                    f"Max validation loops reached for session_id: {session_id}. "
+                    "Returning final result regardless of score."
                 )
 
     if not current_analysis_json:
+        logger.error(
+            f"Analysis failed to produce any result after all attempts for session_id: {session_id}"
+        )
         raise HTTPException(
             status_code=500,
             detail="Analysis failed to produce any result after all attempts.",
         )
 
+    logger.info(f"Successfully completed analysis for session_id: {session_id}")
     return FinalValidatedAnalysisWithHistory(
         analysis=current_analysis_json,
         validation_history=validation_history,
@@ -206,7 +232,6 @@ async def analyze_code(request: CodeRequest) -> FinalValidatedAnalysisWithHistor
 
 
 async def _run_validation(
-    session_service: InMemorySessionService,
     session_id: str,
     code: str,
     evaluation: Dict[str, Any],
@@ -219,7 +244,6 @@ async def _run_validation(
     and processing its output.
 
     Args:
-        session_service: The session service instance.
         session_id: The ID of the current session.
         code: The original code being analyzed.
         evaluation: The analysis JSON produced by the main orchestrator.
@@ -231,7 +255,9 @@ async def _run_validation(
     Raises:
         HTTPException: If the validation workflow fails to produce a valid result.
     """
-    logger.info(f"Starting validation of the evaluation (Iteration {iteration + 1})...")
+    logger.info(
+        f"Starting validation of the evaluation (Iteration {iteration + 1}) for session_id: {session_id}..."
+    )
     validation_orchestrator = ValidationOrchestrator(
         name=f"validation_orchestrator_iter_{iteration}"
     )
@@ -258,7 +284,7 @@ async def _run_validation(
     # The validation input is now a simple static message.
     validation_input = "Please validate the analysis."
 
-    logger.info("Starting validation agent workflow...")
+    logger.info(f"Starting validation agent workflow for session_id: {session_id}...")
     async for _ in validation_runner.run_async(
         user_id="api_user",
         session_id=session_id,
@@ -266,13 +292,16 @@ async def _run_validation(
     ):
         pass  # Run the agent to completion.
 
-    logger.info("Validation agent workflow finished.")
+    logger.info(f"Validation agent workflow finished for session_id: {session_id}.")
 
     # Retrieve the final session state to get the validation output.
     final_session = await session_service.get_session(
         app_name="agentic_code_analyzer", user_id="api_user", session_id=session_id
     )
     if not final_session:
+        logger.error(
+            f"Failed to retrieve session after validation for session_id: {session_id}"
+        )
         raise HTTPException(
             status_code=500, detail="Failed to retrieve session after validation."
         )
@@ -288,11 +317,14 @@ async def _run_validation(
             )
         except Exception as e:
             logger.error(
-                f"Pydantic validation failed for validation output: {e}", exc_info=True
+                f"Pydantic validation failed for validation output for session_id: {session_id}: {e}",
+                exc_info=True,
             )
 
     if not validation_response_model:
-        logger.error("Evaluation validation agent did not return a valid output.")
+        logger.error(
+            f"Evaluation validation agent did not return a valid output for session_id: {session_id}."
+        )
         raise HTTPException(
             status_code=500,
             detail="Evaluation validation failed to produce a valid, structured result.",
@@ -322,11 +354,12 @@ async def validate_evaluation(request: ValidationRequest) -> EvaluationValidatio
     Returns:
         An `EvaluationValidationOutput` object with the validation score and reasoning.
     """
-    logger.info(f"Received request to validate evaluation for: {request.github_link}")
+    session_id = f"standalone_validation_{uuid.uuid4()}"
+    logger.info(
+        f"Received request to validate evaluation for: {request.github_link} using session_id: {session_id}"
+    )
     code = await _fetch_code_from_github(request.github_link)
 
-    session_service = InMemorySessionService()
-    session_id = "standalone_validation_session"
     await session_service.create_session(
         app_name="agentic_code_analyzer",
         user_id="api_user",
@@ -335,7 +368,6 @@ async def validate_evaluation(request: ValidationRequest) -> EvaluationValidatio
     )
 
     return await _run_validation(
-        session_service=session_service,
         session_id=session_id,
         code=code,
         evaluation=request.evaluation,
