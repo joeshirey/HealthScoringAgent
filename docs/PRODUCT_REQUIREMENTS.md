@@ -17,7 +17,7 @@ The primary goals of the Health Scoring Agent are to:
 
 ### 3.1. Code Analysis
 
-The system is designed to be extensible for analyzing code samples in various programming languages. The initial implementation focuses on common languages such as Python and JavaScript.
+The system is designed to be extensible for analyzing code samples in various programming languages. The initial implementation focuses on common languages such as Python, Java, C#, Go, and JavaScript.
 
 The system shall evaluate code against the following core criteria:
 
@@ -53,7 +53,7 @@ The system shall produce a structured JSON object that contains the results of t
 
 ### 4.1. Performance
 
-The system shall be able to analyze a code sample in a timely manner. The target analysis time is less than 60 seconds per file.
+The system shall be able to analyze a code sample in a timely manner. The target analysis time is less than 60 seconds per file, but this may vary depending on the complexity of the code and the number of validation loops required.
 
 ### 4.2. Scalability
 

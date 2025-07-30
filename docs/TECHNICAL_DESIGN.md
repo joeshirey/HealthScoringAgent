@@ -2,7 +2,7 @@
 
 ## 1. Introduction
 
-This document provides a detailed technical overview of the Health Scoring Agent, a multi-agent system for code analysis. It covers the system architecture, the design of the individual agents, the data models used, the prompt engineering strategy, and the API/UI.
+This document provides a detailed technical overview of the Health Scoring Agent, a multi-agent system for code analysis. It covers the system architecture, the design of the individual agents, the data models used, the prompt engineering strategy, and the API/UI. This document is intended for software engineers, architects, and other technical stakeholders who need to understand the inner workings of the system.
 
 ## 2. System Architecture
 
@@ -89,37 +89,37 @@ sequenceDiagram
 
 ## 3. Agent Design
 
-Each agent is a self-contained component. Communication occurs through a shared session state managed by the orchestrator.
+Each agent is a self-contained component responsible for a specific task. Agents communicate through a shared session state managed by the orchestrator. This design promotes modularity and separation of concerns, making the system easier to maintain and extend.
 
 ### 3.1. Orchestrator
 
-The `CodeAnalyzerOrchestrator` is a `SequentialAgent` that defines the primary workflow.
+The `CodeAnalyzerOrchestrator` is a `SequentialAgent` that defines the primary workflow. It is responsible for invoking the other agents in the correct order and passing the necessary data between them.
 
 ### 3.2. Initial Agents
 
-*   **`DeterministicLanguageDetectionAgent`**: A `BaseAgent` that uses the `pygments` library to identify the language, avoiding an LLM call for a deterministic task.
-*   **`DeterministicRegionTagAgent`**: A `BaseAgent` that uses regular expressions to find region tags, also avoiding an LLM call.
-*   **`CodeCleaningAgent`**: A simple utility agent.
-*   **`ProductCategorizationAgent`**: A `BaseAgent` that uses a sophisticated local search mechanism before falling back to an `LlmAgent` if needed.
+*   **`DeterministicLanguageDetectionAgent`**: A `BaseAgent` that uses the `pygments` library to identify the language of the code snippet. This is a deterministic task that does not require an LLM, making it fast and efficient.
+*   **`DeterministicRegionTagAgent`**: A `BaseAgent` that uses regular expressions to find all `[START ...]` and `[END ...]` region tags in the code. This is another deterministic task that is performed without an LLM.
+*   **`CodeCleaningAgent`**: A simple utility agent that removes all comments from the code. This is done to ensure that the subsequent analysis is focused on the executable code and not influenced by comments.
+*   **`ProductCategorizationAgent`**: A `BaseAgent` that uses a sophisticated local search mechanism to identify the Google Cloud product associated with the code. It falls back to an `LlmAgent` if the local search fails, providing a balance of speed and accuracy.
 
 ### 3.3. Evaluation Agents
 
-*   **`InitialAnalysisAgent`**: An `LlmAgent` that uses the `consolidated_eval.md` and `system_instructions.md` prompts to generate a comprehensive, unstructured review. It is recommended to use the Gemini Pro model for this task for higher quality analysis.
-*   **`JsonFormattingAgent`**: An `LlmAgent` that takes the output of the `InitialAnalysisAgent` and structures it according to the schema in `json_conversion.md`. It is recommended to use the Gemini Flash model for this task, as it is a less complex formatting task.
+*   **`InitialAnalysisAgent`**: An `LlmAgent` that performs the core analysis of the code. It uses the `consolidated_eval.md` and `system_instructions.md` prompts to generate a comprehensive, unstructured review. This agent is designed to act as a "Principal Software Engineer" and is equipped with Google Search to verify API usage and best practices. It is recommended to use the Gemini Pro model for this task for higher quality analysis.
+*   **`JsonFormattingAgent`**: An `LlmAgent` that takes the unstructured output of the `InitialAnalysisAgent` and formats it into a structured JSON object. It uses the `json_conversion.md` prompt to guide the formatting process. It is recommended to use the Gemini Flash model for this task, as it is a less complex formatting task.
 
 ### 3.4. Result Processing Agent
 
-The `ResultProcessingAgent` is a `BaseAgent` that performs final data cleaning and aggregation. Its most important function is to enforce the single penalty hierarchy, which prevents redundant recommendations from appearing in the final output.
+The `ResultProcessingAgent` is a `BaseAgent` that performs final data cleaning and aggregation. Its most important function is to enforce the "single penalty" hierarchy, which prevents redundant recommendations from appearing in the final output. This ensures that the final report is concise and actionable.
 
 ### 3.5. Validation Agents
 
 *   **`ValidationOrchestrator`**: A `SequentialAgent` that manages the two-step validation workflow.
-*   **`EvaluationVerificationAgent`**: An `LlmAgent` equipped with the `google_search` tool. It is guided by the `evaluation_validation_prompt.md` to critically review the original analysis and output its findings as raw text.
+*   **`EvaluationVerificationAgent`**: An `LlmAgent` that acts as a "peer reviewer" for the initial analysis. It is guided by the `evaluation_validation_prompt.md` to critically review the original analysis and output its findings as raw text. It is equipped with the `google_search` tool to fact-check the claims made in the analysis.
 *   **`ValidationFormattingAgent`**: An `LlmAgent` that takes the raw text from the verification agent and uses the `validation_formatting_prompt.md` to structure it into the `EvaluationValidationOutput` Pydantic model.
 
 ## 4. Prompt Engineering
 
-The quality of the analysis is highly dependent on the quality of the prompts. This system employs a sophisticated prompt engineering strategy.
+The quality of the analysis is highly dependent on the quality of the prompts. This system employs a sophisticated prompt engineering strategy to ensure the best possible results.
 
 *   **Persona-driven Prompts:** Prompts assign a specific, expert persona to the LLM (e.g., "You are a senior DevOps engineer," "You are a principal engineer at a major tech company"). This focuses the LLM on the specific context and requirements of the task.
 *   **Structured Instructions:** Prompts provide clear, detailed, and itemized instructions on what to analyze. For example, instead of asking for "code quality," the prompt specifies checks for formatting, naming conventions, complexity, and language best practices.

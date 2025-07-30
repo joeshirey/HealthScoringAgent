@@ -6,6 +6,8 @@ The Health Scoring Agent is a sophisticated, multi-agent system designed to anal
 
 - [Health Scoring Agent](#health-scoring-agent)
   - [📖 Table of Contents](#-table-of-contents)
+  - [The Problem](#the-problem)
+  - [The Solution](#the-solution)
   - [✨ Key Features](#-key-features)
   - [🏗️ System Architecture](#️-system-architecture)
     - [High-Level Flow](#high-level-flow)
@@ -15,6 +17,7 @@ The Health Scoring Agent is a sophisticated, multi-agent system designed to anal
   - [🚀 Getting Started](#-getting-started)
     - [Prerequisites](#prerequisites)
     - [Installation and Setup](#installation-and-setup)
+  - [⚙️ Configuration](#️-configuration)
   - [↔️ API Reference](#️-api-reference)
     - [`POST /analyze`](#post-analyze)
     - [`POST /analyze_github_link`](#post-analyze_github_link)
@@ -22,6 +25,18 @@ The Health Scoring Agent is a sophisticated, multi-agent system designed to anal
   - [📁 Project Structure](#-project-structure)
   - [🤝 Contributing](#-contributing)
   - [📄 License](#-license)
+
+## The Problem
+
+Evaluating the quality of code is a complex and often subjective task. Manual code reviews are time-consuming and can be inconsistent. Automated tools can help, but they often lack the nuanced understanding of a human expert. This can lead to a number of challenges:
+
+-   **Inconsistent Quality:** Without a standardized way to measure code health, the quality of code can vary widely across a project or organization.
+-   **Time-Consuming Reviews:** Manual code reviews are a bottleneck in the development process, slowing down the delivery of new features.
+-   **Lack of Actionable Feedback:** Many automated tools provide generic feedback that is not specific enough to be actionable.
+
+## The Solution
+
+The Health Scoring Agent addresses these challenges by providing a consistent, automated, and expert-level analysis of code quality. It uses a multi-agent system to mimic the process of a human code review, with different agents specializing in different aspects of the analysis. The system provides a detailed, actionable report that can be used to improve the quality of the code.
 
 ## ✨ Key Features
 
@@ -37,6 +52,23 @@ The Health Scoring Agent is a sophisticated, multi-agent system designed to anal
 The Health Scoring Agent is built on a modular, multi-agent architecture designed for clarity, extensibility, and maintainability.
 
 ### High-Level Flow
+
+The following diagram illustrates the high-level flow of the system:
+
+```mermaid
+graph TD
+    A[API Request] --> B{CodeAnalyzerOrchestrator};
+    B --> C[Initial Detection];
+    C --> D{Validation};
+    D -- Validation Passed --> E[Code Cleaning];
+    E --> F[Product Categorization];
+    F --> G[Evaluation];
+    G --> H[Result Processing];
+    H --> I{Validation Loop};
+    I -- Score < 7 --> B;
+    I -- Score >= 7 --> J[Final Analysis];
+    D -- Validation Failed --> J;
+```
 
 1.  **API Request:** A user submits code via a REST API endpoint (`/analyze` or `/analyze_github_link`).
 2.  **Main Orchestrator (`CodeAnalyzerOrchestrator`):** This orchestrator manages the primary analysis workflow.
@@ -154,6 +186,16 @@ Follow these instructions to set up and run the Health Scoring Agent locally.
 
     The API will now be available at `http://0.0.0.0:8090`, and the web interface at `http://0.0.0.0:8090/ui`.
 
+## ⚙️ Configuration
+
+The application can be configured using environment variables. The following variables are available:
+
+-   `GEMINI_API_KEY`: Your Google AI API Key.
+-   `GEMINI_PRO_MODEL`: The name of the Gemini Pro model to use.
+-   `GEMINI_FLASH_LITE_MODEL`: The name of the Gemini Flash Lite model to use.
+-   `MAX_VALIDATION_LOOPS`: The maximum number of times the validation loop can run.
+-   `GITHUB_FETCH_TIMEOUT`: The timeout in seconds for fetching code from GitHub.
+
 ## ↔️ API Reference
 
 The Health Scoring Agent provides a simple REST API for analyzing code samples.
@@ -172,13 +214,77 @@ Analyzes a code sample and returns a detailed analysis of its health.
         -   `validation_score`: A score from 1-10 on the quality of the analysis.
         -   `reasoning`: A detailed explanation for the validation score.
 
-**Example:**
+**Example Request:**
 ```bash
 curl -X POST http://localhost:8090/analyze \
 -H "Content-Type: application/json" \
 -d '{
     "code": "def hello_world():\n    print(\"Hello, world!\")"
 }'
+```
+
+**Example Response:**
+```json
+{
+  "analysis": {
+    "language": "Python",
+    "product_name": "Unknown",
+    "product_category": "Unknown",
+    "region_tags": [
+      ""
+    ],
+    "assessment": {
+      "overall_score": 8,
+      "overall_summary": "The code is simple and clear, but lacks error handling and documentation.",
+      "criteria_breakdown": [
+        {
+          "criterion_name": "runnability_and_configuration",
+          "score": 10,
+          "reasoning": "The code is runnable as is.",
+          "recommendations_for_llm_fix": []
+        },
+        {
+          "criterion_name": "language_best_practices",
+          "score": 8,
+          "reasoning": "The code follows basic Python conventions.",
+          "recommendations_for_llm_fix": []
+        }
+      ]
+    }
+  },
+  "validation_history": [
+    {
+      "validation_score": 8,
+      "reasoning": "The analysis is accurate and provides good feedback.",
+      "evaluation_json": {
+        "language": "Python",
+        "product_name": "Unknown",
+        "product_category": "Unknown",
+        "region_tags": [
+          ""
+        ],
+        "assessment": {
+          "overall_score": 8,
+          "overall_summary": "The code is simple and clear, but lacks error handling and documentation.",
+          "criteria_breakdown": [
+            {
+              "criterion_name": "runnability_and_configuration",
+              "score": 10,
+              "reasoning": "The code is runnable as is.",
+              "recommendations_for_llm_fix": []
+            },
+            {
+              "criterion_name": "language_best_practices",
+              "score": 8,
+              "reasoning": "The code follows basic Python conventions.",
+              "recommendations_for_llm_fix": []
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
 ```
 
 ### `POST /analyze_github_link`
