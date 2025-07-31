@@ -21,4 +21,4 @@ EXPOSE 8080
 
 # Command to run the application
 # Use the PORT environment variable provided by Cloud Run, default to 8000 for local development
-CMD exec uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8000}
+CMD exec uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8000} --timeout-graceful-shutdown 60
