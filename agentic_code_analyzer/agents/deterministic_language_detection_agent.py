@@ -21,6 +21,9 @@ logger = logging.getLogger(__name__)
 FILE_EXTENSION_MAP: Dict[str, str] = {
     ".py": "Python",
     ".java": "Java",
+    ".groovy": "Java",
+    ".kt": "Java",
+    ".scala": "Java",
     ".go": "Go",
     ".rb": "Ruby",
     ".rs": "Rust",
@@ -36,6 +39,8 @@ FILE_EXTENSION_MAP: Dict[str, str] = {
     ".ts": "JavaScript",  # TypeScript is normalized to Javascript.
     ".jsx": "JavaScript",
     ".tsx": "JavaScript",
+    ".sh": "Unknown",
+    ".yaml": "Unknown"
 }
 
 # This dictionary contains regular expressions for content-based language
