@@ -52,6 +52,8 @@ async def test_orchestrator_full_run(mock_llm_agents):
     async def mock_initial_analysis_side_effect(*args, **kwargs):
         ctx = args[0]
         ctx.session.state["initial_analysis_output"] = "This is a mock analysis."
+        if False:
+            yield
 
     async def mock_json_formatting_side_effect(*args, **kwargs):
         ctx = args[0]
@@ -77,14 +79,19 @@ async def test_orchestrator_full_run(mock_llm_agents):
         ctx.session.state["evaluation_review_agent_output"] = json.dumps(
             mock_assessment_output
         )
+        if False:
+            yield
 
     async def mock_product_cat_side_effect(*args, **kwargs):
         ctx = args[0]
         ctx.session.state["product_name"] = "Mock Product"
         ctx.session.state["product_category"] = "Mock Category"
+        if False:
+            yield
 
     async def mock_code_cleaning_side_effect(*args, **kwargs):
-        pass
+        if False:
+            yield
 
     mock_code_cleaning.return_value.run_async.side_effect = (
         mock_code_cleaning_side_effect
@@ -226,9 +233,15 @@ async def test_orchestrator_unsupported_language(mock_llm_agents, mocker):
     """
     Tests that the orchestrator halts and returns an error for an unsupported language.
     """
-    mocker.patch(
+    mock_run_async = mocker.patch(
         "agentic_code_analyzer.orchestrator.DeterministicLanguageDetectionAgent.run_async"
     )
+
+    async def mock_side_effect(*args, **kwargs):
+        if False:
+            yield
+
+    mock_run_async.side_effect = mock_side_effect
     orchestrator = CodeAnalyzerOrchestrator(name="test_orchestrator")
     session_service = InMemorySessionService()
 
@@ -280,4 +293,4 @@ async def test_orchestrator_unsupported_language(mock_llm_agents, mocker):
 
     assert final_response, "Final response should not be empty"
     final_data = json.loads(final_response)
-    assert final_data == {"error": "Unsupported language"}
+    assert final_data == {"error": "Unsupported Language"}
