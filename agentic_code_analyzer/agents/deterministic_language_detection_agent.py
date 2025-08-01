@@ -40,7 +40,7 @@ FILE_EXTENSION_MAP: Dict[str, str] = {
     ".jsx": "JavaScript",
     ".tsx": "JavaScript",
     ".sh": "Unknown",
-    ".yaml": "Unknown"
+    ".yaml": "Unknown",
 }
 
 # This dictionary contains regular expressions for content-based language
