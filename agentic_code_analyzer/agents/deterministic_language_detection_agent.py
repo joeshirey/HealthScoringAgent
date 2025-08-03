@@ -41,6 +41,7 @@ FILE_EXTENSION_MAP: Dict[str, str] = {
     ".tsx": "JavaScript",
     ".sh": "Unknown",
     ".yaml": "Unknown",
+    ".xml": "Unknown",
 }
 
 # This dictionary contains regular expressions for content-based language
@@ -129,7 +130,7 @@ class DeterministicLanguageDetectionAgent(BaseAgent):
         """
         github_link = ctx.session.state.get("github_link")
         code_snippet = ctx.session.state.get("code_snippet", "")
-        final_language = "Unknown"
+        final_language = ""
 
         # Step 1: Attempt to detect the language from the file extension.
         # This is the most reliable method.
@@ -150,13 +151,19 @@ class DeterministicLanguageDetectionAgent(BaseAgent):
                 )
 
         # Step 2: If file extension detection fails, fall back to content analysis.
-        if final_language == "Unknown" and code_snippet:
-            logger.info("Falling back to content-based language detection.")
-            for lang, patterns in LANGUAGE_KEYWORDS.items():
-                if any(pattern.search(code_snippet) for pattern in patterns):
-                    final_language = lang
-                    logger.info(f"Language identified as '{lang}' by keyword match.")
-                    break  # Stop after the first successful match.
+        if not final_language:
+            if code_snippet:
+                final_language = "Unknown"
+                logger.info("Falling back to content-based language detection.")
+                for lang, patterns in LANGUAGE_KEYWORDS.items():
+                    if any(pattern.search(code_snippet) for pattern in patterns):
+                        final_language = lang
+                        logger.info(
+                            f"Language identified as '{lang}' by keyword match."
+                        )
+                        break  # Stop after the first successful match.
+            else:
+                final_language = "Unknown"
 
         if final_language == "Unknown":
             logger.warning(
