@@ -387,4 +387,8 @@ number and severity of issues found.
       * Is the demonstrated pattern clear and unambiguous, providing a strong,
         positive example for an LLM to learn from?
 
+## Post Processing once scoring is complete
+
+* Review the issues identified across all of the categories. Double check to ensure that the core rule **Single Penalty Hierarchy:** is not violated. If an issues is being penalized across multiple categories, please update the scoring and follow the **Single Penalty Hierarchy:** rules so it only appears in one category and only impacts the score in a single category.
+
 </assessment_criteria>
