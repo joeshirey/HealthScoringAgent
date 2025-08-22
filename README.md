@@ -234,7 +234,8 @@ Follow these instructions to set up and run the Health Scoring Agent locally.
     environment.
 
     ```bash
-    python3 -m venv .venv
+    # Create and activate a virtual environment using uv
+    uv venv
     source .venv/bin/activate
     ```
 
@@ -246,7 +247,7 @@ Follow these instructions to set up and run the Health Scoring Agent locally.
     listed in `pyproject.toml`.
 
     ```bash
-    pip install uv
+    # Install dependencies into the virtual environment
     uv pip install -e .
     ```
 

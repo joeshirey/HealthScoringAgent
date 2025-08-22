@@ -19,7 +19,7 @@ from google.genai.types import Content, Part
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_LANGUAGES = [
+SUPPORTED_LANGUAGES = {
     "C#",
     "C++",
     "Go",
@@ -30,7 +30,7 @@ SUPPORTED_LANGUAGES = [
     "Ruby",
     "Terraform",
     "TypeScript",
-]
+}
 
 
 class ValidationAgent(BaseAgent):

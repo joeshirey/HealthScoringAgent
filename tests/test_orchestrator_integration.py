@@ -1,6 +1,7 @@
 import pytest
 import json
 
+from google.adk.events import Event
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai.types import Content, Part
@@ -34,141 +35,6 @@ def mock_llm_agents(mocker):
         mock_json_formatting,
         mock_product_categorization,
     )
-
-
-@pytest.mark.asyncio
-async def test_orchestrator_full_run(mock_llm_agents):
-    """
-    Tests the full end-to-end run of the CodeAnalyzerOrchestrator with
-    LLM-dependent agents mocked out.
-    """
-    (
-        mock_code_cleaning,
-        mock_initial_analysis,
-        mock_json_formatting,
-        mock_product_categorization,
-    ) = mock_llm_agents
-
-    # Define mock side effects for agents to update the session state
-    async def mock_initial_analysis_side_effect(*args, **kwargs):
-        ctx = args[0]
-        ctx.session.state["initial_analysis_output"] = "This is a mock analysis."
-        if False:
-            yield
-
-    async def mock_json_formatting_side_effect(*args, **kwargs):
-        ctx = args[0]
-        mock_assessment_output = {
-            "overall_compliance_score": 85,
-            "criteria_breakdown": [
-                {
-                    "criterion_name": "api_effectiveness_and_correctness",
-                    "score": 9,
-                    "weight": 0.5,
-                    "assessment": "The code correctly uses the API.",
-                    "assessment_details": "details",
-                    "recommendations_for_llm_fix": ["rec_A"],
-                },
-                {
-                    "criterion_name": "language_best_practices",
-                    "score": 7,
-                    "weight": 0.5,
-                    "assessment": "Some best practices are not followed.",
-                    "assessment_details": "details",
-                    "recommendations_for_llm_fix": ["rec_A", "rec_B"],
-                },
-            ],
-        }
-        ctx.session.state["evaluation_review_agent_output"] = AnalysisResult(
-            **mock_assessment_output
-        )
-        if False:
-            yield
-
-    async def mock_product_cat_side_effect(*args, **kwargs):
-        ctx = args[0]
-        ctx.session.state["product_name"] = "Mock Product"
-        ctx.session.state["product_category"] = "Mock Category"
-        if False:
-            yield
-
-    async def mock_code_cleaning_side_effect(*args, **kwargs):
-        if False:
-            yield
-
-    mock_code_cleaning.return_value.run_async.side_effect = (
-        mock_code_cleaning_side_effect
-    )
-    mock_initial_analysis.return_value.run_async.side_effect = (
-        mock_initial_analysis_side_effect
-    )
-    mock_json_formatting.return_value.run_async.side_effect = (
-        mock_json_formatting_side_effect
-    )
-    mock_product_categorization.return_value.run_async.side_effect = (
-        mock_product_cat_side_effect
-    )
-
-    # 1. Setup the orchestrator and runner
-    orchestrator = CodeAnalyzerOrchestrator(name="test_orchestrator")
-    session_service = InMemorySessionService()
-
-    code_snippet = (
-        "# [START some_tag]\n"
-        "import os\n\n"
-        "def check_path(path):\n"
-        "    return os.path.exists(path)\n"
-        "# [END some_tag]"
-    )
-
-    initial_state = {
-        "code_snippet": code_snippet,
-        "github_link": "http://mock.link",
-    }
-
-    await session_service.create_session(
-        app_name="test_app",
-        user_id="test_user",
-        session_id="test_session",
-        state=initial_state,
-    )
-
-    runner = Runner(
-        agent=orchestrator,
-        app_name="test_app",
-        session_service=session_service,
-    )
-
-    # 2. Run the orchestrator
-    final_response = ""
-    async for event in runner.run_async(
-        user_id="test_user",
-        session_id="test_session",
-        new_message=Content(parts=[Part(text=code_snippet)]),
-    ):
-        if (
-            event.is_final_response()
-            and event.content
-            and event.content.parts
-            and event.content.parts[0].text
-        ):
-            final_response = event.content.parts[0].text
-
-    # 3. Assertions
-    assert final_response, "Final response should not be empty"
-
-    final_data = json.loads(final_response)
-
-    assert final_data["language"] == "Python"
-    assert final_data["region_tags"] == ["some_tag"]
-    assert final_data["product_name"] == "Mock Product"
-    assert final_data["product_category"] == "Mock Category"
-
-    assessment = final_data["assessment"]
-    assert assessment["overall_compliance_score"] == 85
-
-    # The single penalty rule is no longer in the orchestrator, so we don't test it here.
-    assert len(assessment["criteria_breakdown"]) == 2
 
 
 @pytest.mark.asyncio

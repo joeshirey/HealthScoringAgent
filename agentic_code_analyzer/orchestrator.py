@@ -10,7 +10,7 @@ ensuring each specialized agent performs its task in the correct sequence.
 import json
 import logging
 import os
-from typing import AsyncGenerator, Any, List
+from typing import Any
 
 from google.adk.agents import ParallelAgent, SequentialAgent
 from google.adk.agents.invocation_context import InvocationContext
@@ -39,7 +39,7 @@ from agentic_code_analyzer.agents.analysis.json_formatting_agent import (
 logger = logging.getLogger(__name__)
 
 
-SUPPORTED_LANGUAGES: List[str] = [
+SUPPORTED_LANGUAGES: set[str] = {
     "C#",
     "C++",
     "Go",
@@ -50,7 +50,7 @@ SUPPORTED_LANGUAGES: List[str] = [
     "Ruby",
     "Rust",
     "Terraform",
-]
+}
 
 
 class CodeAnalyzerOrchestrator(SequentialAgent):
@@ -114,69 +114,47 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
             **kwargs,
         )
 
-    async def _run_async_impl(
-        self, ctx: InvocationContext
-    ) -> AsyncGenerator[Event, None]:
+    async def _process_final_event(
+        self, event: Event, ctx: InvocationContext
+    ) -> Event | None:
         """
-        Manually orchestrates the code analysis workflow to allow for
-        conditional halting based on validation.
+        Processes the final event from the sub-agents to generate the final output.
         """
-        logger.info(f"[{self.name}] Starting code analysis orchestration.")
+        logger.info(f"[{self.name}] Code analysis orchestration complete.")
 
-        # Step 1: Initial Detection (Parallel)
-        async for event in self.sub_agents[0].run_async(ctx):
-            yield event
-        logger.info(f"[{self.name}] Initial detection phase complete.")
+        # If the workflow was halted by the validation agent, the final event will
+        # contain the error. In this case, we simply forward the event.
+        if event.author == "validation_agent":
+            return event
 
-        # Step 2: Validation
-        # The validation agent only yields an event if validation fails.
-        async for event in self.sub_agents[1].run_async(ctx):
-            # The only events yielded are final failure events.
-            logger.warning(f"[{self.name}] Validation failed. Halting workflow.")
-            yield event
-            return
-
-        logger.info(f"[{self.name}] Validation passed. Continuing workflow.")
-
-        # Step 3: Code Cleaning
-        async for event in self.sub_agents[2].run_async(ctx):
-            yield event
-        logger.info(f"[{self.name}] Code cleaning complete.")
-
-        # Step 4: Product Categorization
-        async for event in self.sub_agents[3].run_async(ctx):
-            yield event
-        logger.info(f"[{self.name}] Product categorization complete.")
-
-        # Step 5: Evaluation
-        async for event in self.sub_agents[4].run_async(ctx):
-            yield event
-        logger.info(f"[{self.name}] Evaluation workflow complete.")
-
-        # Step 6: Final Result Processing
         final_assessment = ctx.session.state.get("evaluation_review_agent_output")
-        if isinstance(final_assessment, AnalysisResult):
-            final_output = {
-                "language": ctx.session.state.get(
-                    "language_detection_agent_output", "Unknown"
-                ),
-                "product_name": ctx.session.state.get("product_name", "Unknown"),
-                "product_category": ctx.session.state.get(
-                    "product_category", "Unknown"
-                ),
-                "region_tags": ctx.session.state.get(
-                    "region_tag_extraction_agent_output", ""
-                ).split(","),
-                "assessment": final_assessment.model_dump(),
-            }
-            final_json = json.dumps(final_output, indent=2)
-            yield Event(
+        if not isinstance(final_assessment, AnalysisResult):
+            logger.error("Assessment output was not of the expected type.")
+            # Create a default error if the expected output is not found.
+            error_response = json.dumps({"error": "Internal Server Error"})
+            return Event(
                 author=self.name,
-                content=Content(parts=[Part(text=final_json)]),
+                content=Content(parts=[Part(text=error_response)]),
                 turn_complete=True,
             )
-        else:
-            logger.error("Assessment output was not of the expected type.")
+
+        final_output = {
+            "language": ctx.session.state.get(
+                "language_detection_agent_output", "Unknown"
+            ),
+            "product_name": ctx.session.state.get("product_name", "Unknown"),
+            "product_category": ctx.session.state.get("product_category", "Unknown"),
+            "region_tags": ctx.session.state.get(
+                "region_tag_extraction_agent_output", ""
+            ).split(","),
+            "assessment": final_assessment.model_dump(),
+        }
+        final_json = json.dumps(final_output, indent=2)
+        return Event(
+            author=self.name,
+            content=Content(parts=[Part(text=final_json)]),
+            turn_complete=True,
+        )
 
     def _create_initial_detection_agent(self) -> ParallelAgent:
         """
