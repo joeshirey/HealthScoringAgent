@@ -106,12 +106,11 @@ graph TD
     C --> D{Validation};
     D -- Validation Passed --> E[Code Cleaning];
     E --> F[Product Categorization];
-    F --> G[Evaluation];
-    G --> H[Result Processing];
-    H --> I{Validation Loop};
-    I -- Score < 7 --> B;
-    I -- Score >= 7 --> J[Final Analysis];
-    D -- Validation Failed --> J;
+    F --> G[Evaluation & Final Processing];
+    G --> H{Validation Loop};
+    H -- Score < 7 --> B;
+    H -- Score >= 7 --> I[Final Analysis];
+    D -- Validation Failed --> I;
 ```
 
 1. **API Request:** A user submits code via a REST API endpoint (`/analyze` or
@@ -123,9 +122,10 @@ graph TD
     - **Phase 2: Core Evaluation:** A sequential agent performs a deep
         analysis of the code, covering quality, runnability, and API
         correctness. A separate agent then formats this analysis into a
-        structured JSON object.
-    - **Phase 3: Result Processing:** The results are finalized, and business
-        rules (like the single penalty rule) are applied.
+        structured `AnalysisResult` object.
+    - **Phase 3: Final Processing:** The orchestrator combines the structured
+        output with metadata from earlier steps to generate the final JSON
+        response.
 3. **Validation Loop (API Layer):**
     - The API triggers a secondary `ValidationOrchestrator`.
     - An `EvaluationVerificationAgent` uses Google Search to verify the
@@ -181,13 +181,9 @@ domain:
         "Principal Software Engineer." It uses a powerful LLM and Google Search
         to perform a deep, qualitative review of the code.
   - `JsonFormattingAgent`: A specialized utility agent that takes the
-        unstructured text from the analysis and converts it into a clean,
-        structured JSON object using a faster, more lightweight LLM.
-
-- **Finalization Agent (`ResultProcessingAgent`):** This agent applies final
-    business logic to the structured JSON output, such as the "single penalty"
-    rule, which de-duplicates recommendations to ensure the final feedback is
-    concise and actionable.
+        unstructured text from the analysis and converts it into a structured
+        `AnalysisResult` object using the ADK's `output_schema` feature. This
+        ensures a reliable, typed output.
 
 - **Validation Workflow Agents:**
   - `EvaluationVerificationAgent`: A secondary "peer review" agent that

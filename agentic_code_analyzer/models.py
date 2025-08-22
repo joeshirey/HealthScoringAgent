@@ -153,7 +153,7 @@ class Citation(BaseModel):
     url: str = Field(..., description="The URL of the cited source material.")
 
 
-class EvaluationOutput(BaseModel):
+class AnalysisResult(BaseModel):
     """
     The main Pydantic model for the final, structured output of the entire
     evaluation workflow. This is the object that is ultimately returned to the

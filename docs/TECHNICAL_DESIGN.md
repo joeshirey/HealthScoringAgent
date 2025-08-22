@@ -36,8 +36,7 @@ graph TD
         A[CodeAnalyzerOrchestrator] --> B(Initial Detection);
         B --> C(Code Cleaning);
         C --> D(Product Categorization);
-        D --> E(Evaluation);
-        E --> F(Result Processing);
+        D --> E(Evaluation & Final Processing);
     end
 
     subgraph "Secondary Workflow: Validation"
@@ -83,13 +82,12 @@ high-quality, validated analysis of a given code sample.
             unstructured text.
         2. `JsonFormattingAgent`: A second, more lightweight LLM agent takes
             the unstructured text from the previous step and meticulously
-            formats it into a structured JSON object that conforms to the
-            `EvaluationOutput` Pydantic model.
-    * **Result Processing:** The `ResultProcessingAgent` performs final
-        post-processing on the JSON output. Its key responsibility is to enforce
-        the "single penalty" rule, which de-duplicates recommendations across
-        different evaluation criteria to ensure the final feedback is concise
-        and non-redundant.
+            formats it into a structured `AnalysisResult` object using the
+            ADK's `output_schema` feature.
+    * **Final Processing:** The `CodeAnalyzerOrchestrator` itself performs the
+        final processing. It takes the structured `AnalysisResult` object,
+        combines it with metadata from earlier steps (like language and product),
+        and assembles the final JSON response.
 
 2. **Validation Workflow (`ValidationOrchestrator`):** After the primary
     analysis workflow completes, the API layer immediately initiates a validation
@@ -188,17 +186,11 @@ and passing the necessary data between them.
   Search to verify API usage and best practices. It is recommended to use the
   Gemini Pro model for this task for higher quality analysis.
 * **`JsonFormattingAgent`**: An `LlmAgent` that takes the unstructured output of
-  the `InitialAnalysisAgent` and formats it into a structured JSON object. It
-  uses the `json_conversion.md` prompt to guide the formatting process. It is
-  recommended to use the Gemini Flash model for this task, as it is a less
-  complex formatting task.
-
-### 3.4. Result Processing Agent
-
-The `ResultProcessingAgent` is a `BaseAgent` that performs final data cleaning
-and aggregation. Its most important function is to enforce the "single penalty"
-hierarchy, which prevents redundant recommendations from appearing in the final
-output. This ensures that the final report is concise and actionable.
+  the `InitialAnalysisAgent` and formats it into a structured `AnalysisResult`
+  object. It leverages the `output_schema` feature of the ADK, which removes
+  the need for a separate JSON conversion prompt and significantly improves
+  the reliability of the output. It is recommended to use a fast model like
+  Gemini Flash for this task.
 
 ### 3.5. Validation Agents
 
@@ -237,11 +229,11 @@ best possible results.
 The system uses Pydantic models to define the expected structure of its inputs
 and outputs, ensuring type safety and clear API contracts.
 
-### 5.1. `EvaluationOutput` Schema
+### 5.1. `AnalysisResult` Schema
 
 This is the core data model for the primary analysis, enforced by the
-`JsonFormattingAgent`. It provides a rich, multi-faceted view of the code's
-health.
+`JsonFormattingAgent` via the `output_schema` parameter. It provides a rich,
+multi-faceted view of the code's health.
 
 ```json
 {
@@ -287,7 +279,7 @@ endpoints. It encapsulates the entire iterative process.
 
 ```json
 {
-  "analysis": { ... }, // The final, highest-scoring EvaluationOutput object
+  "analysis": { ... }, // The final, highest-scoring AnalysisResult object
   "validation_history": [
     {
       "validation_score": "integer (1-10)",

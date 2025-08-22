@@ -6,6 +6,7 @@ from google.adk.sessions import InMemorySessionService
 from google.genai.types import Content, Part
 
 from agentic_code_analyzer.orchestrator import CodeAnalyzerOrchestrator
+from agentic_code_analyzer.models import AnalysisResult
 
 
 @pytest.fixture
@@ -63,6 +64,7 @@ async def test_orchestrator_full_run(mock_llm_agents):
                 {
                     "criterion_name": "api_effectiveness_and_correctness",
                     "score": 9,
+                    "weight": 0.5,
                     "assessment": "The code correctly uses the API.",
                     "assessment_details": "details",
                     "recommendations_for_llm_fix": ["rec_A"],
@@ -70,14 +72,15 @@ async def test_orchestrator_full_run(mock_llm_agents):
                 {
                     "criterion_name": "language_best_practices",
                     "score": 7,
+                    "weight": 0.5,
                     "assessment": "Some best practices are not followed.",
                     "assessment_details": "details",
                     "recommendations_for_llm_fix": ["rec_A", "rec_B"],
                 },
             ],
         }
-        ctx.session.state["evaluation_review_agent_output"] = json.dumps(
-            mock_assessment_output
+        ctx.session.state["evaluation_review_agent_output"] = AnalysisResult(
+            **mock_assessment_output
         )
         if False:
             yield
@@ -164,21 +167,8 @@ async def test_orchestrator_full_run(mock_llm_agents):
     assessment = final_data["assessment"]
     assert assessment["overall_compliance_score"] == 85
 
-    breakdown = sorted(
-        assessment["criteria_breakdown"], key=lambda x: x["criterion_name"]
-    )
-
-    api_crit = next(
-        c
-        for c in breakdown
-        if c["criterion_name"] == "api_effectiveness_and_correctness"
-    )
-    lang_crit = next(
-        c for c in breakdown if c["criterion_name"] == "language_best_practices"
-    )
-
-    assert api_crit["recommendations_for_llm_fix"] == ["rec_A"]
-    assert lang_crit["recommendations_for_llm_fix"] == ["rec_B"]
+    # The single penalty rule is no longer in the orchestrator, so we don't test it here.
+    assert len(assessment["criteria_breakdown"]) == 2
 
 
 @pytest.mark.asyncio

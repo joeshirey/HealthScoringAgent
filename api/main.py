@@ -266,8 +266,11 @@ async def _run_validation(
         app_name="agentic_code_analyzer", user_id="api_user", session_id=session_id
     )
     if session:
+        # Preserve the language detection output from the main analysis run.
+        language = session.state.get("language_detection_agent_output", "Unknown")
         session.state["code_snippet"] = code
         session.state["evaluation_json"] = evaluation
+        session.state["language_detection_agent_output"] = language
         await session_service.create_session(
             app_name=session.app_name,
             user_id=session.user_id,
