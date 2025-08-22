@@ -200,6 +200,8 @@ class CodeAnalyzerOrchestrator(SequentialAgent):
             output_key="evaluation_review_agent_output",
             output_schema=AnalysisResult,
             model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-2.5-flash-lite"),
+            disallow_transfer_to_parent=True,
+            disallow_transfer_to_peers=True,
         )
         return SequentialAgent(
             name="evaluation_workflow",

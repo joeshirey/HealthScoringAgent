@@ -1,13 +1,11 @@
 import pytest
 import json
 
-from google.adk.events import Event
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai.types import Content, Part
 
 from agentic_code_analyzer.orchestrator import CodeAnalyzerOrchestrator
-from agentic_code_analyzer.models import AnalysisResult
 
 
 @pytest.fixture
