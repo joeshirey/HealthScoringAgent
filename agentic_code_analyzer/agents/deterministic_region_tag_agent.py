@@ -1,6 +1,12 @@
 """
-This module defines the `DeterministicRegionTagAgent`, a rule-based agent for
-extracting region tags from a code snippet.
+This module defines the `DeterministicRegionTagAgent`, a non-LLM agent that
+efficiently extracts region tags from a code snippet.
+
+Region tags (e.g., `[START vision_face_detection]`) are a common convention in
+code samples for identifying specific, meaningful blocks of code. This agent
+uses a simple and fast regular expression to find all unique `[START ...]` and
+`[END ...]` tags. This deterministic approach avoids LLM costs and provides
+reliable metadata for the initial phase of the analysis workflow.
 """
 
 import logging

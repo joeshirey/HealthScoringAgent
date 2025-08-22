@@ -1,7 +1,13 @@
 """
-This module defines the `JsonFormattingAgent`, which is responsible for
-converting the raw text output of the initial analysis into a structured
-JSON object.
+This module defines the `JsonFormattingAgent`, a specialized utility agent that
+converts the unstructured text output from the `InitialAnalysisAgent` into a
+clean, structured JSON object.
+
+By dedicating a separate agent to formatting, the system can use a faster, more
+cost-effective LLM for this simpler task, while reserving the more powerful
+model for the complex analytical work. This design pattern improves the overall
+efficiency and reliability of the analysis pipeline, ensuring that the final
+output is always programmatically accessible.
 """
 
 from typing import Any

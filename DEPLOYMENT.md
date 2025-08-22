@@ -4,26 +4,30 @@ This document provides step-by-step instructions for deploying the Health Scorin
 
 ## Prerequisites
 
-1.  **Google Cloud SDK:** Ensure you have the [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) installed and configured on your local machine.
-2.  **gcloud CLI:** Authenticate the `gcloud` CLI with your Google Cloud account:
+1. **Google Cloud SDK:** Ensure you have the [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) installed and configured on your local machine.
+2. **gcloud CLI:** Authenticate the `gcloud` CLI with your Google Cloud account:
+
     ```bash
     gcloud auth login
     gcloud auth application-default login
     ```
-3.  **Google Cloud Project:** Have a Google Cloud project created with the following APIs enabled:
-    *   Cloud Run API
-    *   Artifact Registry API
-    *   Cloud Build API
+
+3. **Google Cloud Project:** Have a Google Cloud project created with the following APIs enabled:
+    * Cloud Run API
+    * Artifact Registry API
+    * Cloud Build API
     You can enable them with the following commands, replacing `[PROJECT_ID]` with your project ID:
+
     ```bash
     gcloud services enable run.googleapis.com --project [PROJECT_ID]
     gcloud services enable artifactregistry.googleapis.com --project [PROJECT_ID]
     gcloud services enable cloudbuild.googleapis.com --project [PROJECT_ID]
     ```
-4.  **Permissions:** Ensure the Cloud Build service account has the necessary IAM roles to deploy to Cloud Run and manage Artifact Registry.
-    *   Go to the IAM page in the Google Cloud Console.
-    *   Find the Cloud Build service account (`[PROJECT_NUMBER]@cloudbuild.gserviceaccount.com`).
-    *   Grant it the "Cloud Run Admin" (`roles/run.admin`) and "Artifact Registry Writer" (`roles/artifactregistry.writer`) roles.
+
+4. **Permissions:** Ensure the Cloud Build service account has the necessary IAM roles to deploy to Cloud Run and manage Artifact Registry.
+    * Go to the IAM page in the Google Cloud Console.
+    * Find the Cloud Build service account (`[PROJECT_NUMBER]@cloudbuild.gserviceaccount.com`).
+    * Grant it the "Cloud Run Admin" (`roles/run.admin`) and "Artifact Registry Writer" (`roles/artifactregistry.writer`) roles.
 
 ## Deployment Steps
 
@@ -51,11 +55,12 @@ gcloud builds submit --config cloudbuild.yaml .
 ```
 
 This command will:
-1.  Submit the code in the current directory to Cloud Build.
-2.  Execute the steps defined in `cloudbuild.yaml`:
-    *   Build the Docker image.
-    *   Push the image to Artifact Registry.
-    *   Deploy the new image to your Cloud Run service.
+
+1. Submit the code in the current directory to Cloud Build.
+2. Execute the steps defined in `cloudbuild.yaml`:
+    * Build the Docker image.
+    * Push the image to Artifact Registry.
+    * Deploy the new image to your Cloud Run service.
 
 ### Customizing the Deployment
 

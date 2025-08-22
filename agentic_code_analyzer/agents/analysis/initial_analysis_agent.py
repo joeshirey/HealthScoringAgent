@@ -1,6 +1,13 @@
 """
-This module defines the `InitialAnalysisAgent`, which performs the first-pass,
-detailed analysis of the code snippet.
+This module defines the `InitialAnalysisAgent`, the primary analytical agent in
+the Health Scoring system.
+
+This agent is responsible for conducting the deep, qualitative review of the
+code. It is designed to act as a "Principal Software Engineer," leveraging a
+powerful LLM and the Google Search tool to perform a comprehensive, multi-faceted
+evaluation. Its output is a detailed, unstructured text review, which is then
+passed to a separate agent for formatting. This separation of concerns allows
+this agent to focus purely on the quality of the analysis.
 """
 
 from typing import Any

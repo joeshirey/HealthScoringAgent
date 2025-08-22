@@ -1,9 +1,12 @@
 """
-This module defines the main orchestrator for the Health Scoring Agent.
+This module defines the main orchestrators for the Health Scoring Agent.
 
 It contains the `CodeAnalyzerOrchestrator`, a sequential agent that coordinates
-the entire code analysis workflow, and the `ResultProcessingAgent`, which
-finalizes the analysis output.
+the entire code analysis workflow from initial detection to final output, and
+the `ResultProcessingAgent`, which cleans, formats, and applies business logic
+to the raw analysis results. The orchestrator is the central component that
+drives the multi-agent system, ensuring each specialized agent performs its
+task in the correct sequence.
 """
 
 import json
@@ -293,15 +296,34 @@ class CodeAnalyzerOrchestrator(BaseAgent):
     Orchestrates the end-to-end code analysis workflow.
 
     This agent manages a sequence of sub-agents to perform a comprehensive
-    analysis of a given code snippet. The workflow is as follows:
-    1.  **Initial Detection:** Language and region tags are detected in parallel.
+    analysis of a given code snippet. The workflow is designed for robustness
+    and efficiency, with clear separation of concerns at each step:
 
-    2.  **Validation:** Validates the language and region tags, halting on failure.
-    3.  **Code Cleaning:** Comments are removed from the code.
-    4.  **Product Categorization:** The relevant product is identified.
-    5.  **Evaluation:** A two-step process involving a detailed analysis
-        followed by JSON formatting.
-    6.  **Result Processing:** The final output is assembled and cleaned.
+    1.  **Initial Detection (Parallel):** The `initial_detection_agent` runs
+        language and region tag detection concurrently for speed. This step
+        gathers basic metadata without incurring LLM costs.
+
+    2.  **Validation:** The `validation_agent` performs critical pre-checks. It
+        ensures that region tags were found and that the detected language is
+        supported. If validation fails, the entire workflow is halted early to
+        avoid unnecessary processing.
+
+    3.  **Code Cleaning:** The `code_cleaning_agent` removes all comments from
+        the code. This standardizes the input for the analytical agents and
+        ensures the evaluation is based purely on executable code.
+
+    4.  **Product Categorization:** The `product_categorization_agent`
+        identifies the Google Cloud product associated with the code, using a
+        fast, rule-based approach with an LLM fallback for accuracy.
+
+    5.  **Evaluation (Sequential):** The `evaluation_agent` is a two-step
+        sub-workflow. First, a powerful LLM performs a detailed, qualitative
+        analysis. Second, a faster LLM formats this analysis into a
+        structured JSON object.
+
+    6.  **Result Processing:** The `result_processor` takes the structured JSON,
+        applies final business logic (like the "single penalty" rule), and
+        assembles the final, comprehensive output.
     """
 
     initial_detection_agent: ParallelAgent

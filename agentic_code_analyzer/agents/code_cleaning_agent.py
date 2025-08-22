@@ -1,6 +1,11 @@
 """
-This module defines the `CodeCleaningAgent`, which is responsible for removing
-comments from a code snippet before it is analyzed.
+This module defines the `CodeCleaningAgent`, a utility agent responsible for
+preprocessing the raw code snippet before it undergoes analysis.
+
+By removing all comments from the code, this agent ensures that the evaluation
+is based solely on the functional, executable code. This prevents comments,
+which can sometimes be outdated or misleading, from influencing the outcome of
+the analysis and standardizes the input for the downstream analytical agents.
 """
 
 import logging

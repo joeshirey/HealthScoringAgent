@@ -1,6 +1,14 @@
 """
-This module defines the `DeterministicLanguageDetectionAgent`, a rule-based
-agent for identifying the programming language of a code snippet.
+This module defines the `DeterministicLanguageDetectionAgent`, a non-LLM agent
+that performs fast and reliable language identification.
+
+This agent uses a two-step, rule-based approach to determine the programming
+language of a code snippet. It first attempts to identify the language from the
+file extension of a provided GitHub link, which is the most accurate method. If
+that is not possible, it falls back to a content-based analysis using a curated
+set of regular expressions that match language-specific keywords. This
+deterministic process avoids LLM costs and provides immediate, consistent
+results for the initial phase of the analysis workflow.
 """
 
 import logging

@@ -1,6 +1,13 @@
 """
 This module defines the `ProductCategorizationAgent`, which is responsible for
-identifying the product and product category associated with a code sample.
+identifying the Google Cloud product and product category associated with a
+given code sample.
+
+This agent uses a hybrid approach, prioritizing a fast, deterministic,
+local search-based tool for common cases. If this initial method fails to
+produce a confident result, it automatically falls back to a more flexible
+LLM-based analysis. This strategy optimizes for both speed and accuracy,
+ensuring that product categorization is both efficient and robust.
 """
 
 import logging

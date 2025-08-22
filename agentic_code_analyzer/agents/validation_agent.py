@@ -1,8 +1,11 @@
 """
 This module defines the ValidationAgent for the Health Scoring Agent.
 
-It contains the `ValidationAgent`, which is responsible for validating the
-output of the initial detection phase and halting the workflow if necessary.
+The `ValidationAgent` acts as a critical gatekeeper in the analysis workflow.
+It performs essential pre-checks on the output of the initial detection phase
+(language and region tags). If these checks fail, it halts the entire
+orchestration to prevent wasted processing on invalid or unsupported inputs.
+This fail-fast approach improves the efficiency and reliability of the system.
 """
 
 import json
