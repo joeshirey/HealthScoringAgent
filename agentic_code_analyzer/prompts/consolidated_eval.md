@@ -1,3 +1,5 @@
+# Consolidated Evaluation
+
 **LANGUAGE:**
 {{language_detection_agent_output}}
 
@@ -8,10 +10,12 @@
 {{region_tag_extraction_agent_output}}
 
 **CODE_SAMPLE:**
+
 ```{{language_detection_agent_output}}
 {{code_snippet}}
 ```
 
 **cleaned_code:**
-```
+
+```{{language_detection_agent_output}}
 {{cleaned_code}}

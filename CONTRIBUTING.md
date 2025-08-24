@@ -14,10 +14,10 @@ There are many ways to contribute, from writing tutorials or blog posts, improvi
 
 If you find a bug, please [create an issue](https://github.com/joeshirey/HealthScoringAgent/issues/new) and provide the following information:
 
--   A clear and descriptive title.
--   A detailed description of the problem, including steps to reproduce it.
--   The expected behavior and what actually happened.
--   Your system information (OS, Python version, etc.).
+- A clear and descriptive title.
+- A detailed description of the problem, including steps to reproduce it.
+- The expected behavior and what actually happened.
+- Your system information (OS, Python version, etc.).
 
 ### Suggesting Enhancements
 
@@ -27,33 +27,33 @@ If you have an idea for a new feature or an enhancement to an existing one, plea
 
 We welcome pull requests! Please follow these steps to submit your contribution:
 
-1.  **Fork the repository** and create a new branch from `main`.
-    -   A good branch name would be `feature/33-add-new-agent` or `bugfix/42-fix-api-error`.
-2.  **Set up your development environment.**
-3.  **Make your changes.** Ensure your code follows the project's style guidelines.
-4.  **Add or update tests** for your changes.
-5.  **Update the documentation** if your changes affect it.
-6.  **Submit a pull request** to the `main` branch of the original repository.
+1. **Fork the repository** and create a new branch from `main`.
+    - A good branch name would be `feature/33-add-new-agent` or `bugfix/42-fix-api-error`.
+2. **Set up your development environment.**
+3. **Make your changes.** Ensure your code follows the project's style guidelines.
+4. **Add or update tests** for your changes.
+5. **Update the documentation** if your changes affect it.
+6. **Submit a pull request** to the `main` branch of the original repository.
 
 ## Development Setup
 
 To get started with development, you'll need to set up your local environment.
 
-1.  **Clone your fork:**
+1. **Clone your fork:**
 
     ```sh
     git clone https://github.com/YOUR_USERNAME/HealthScoringAgent.git
     cd HealthScoringAgent
     ```
 
-2.  **Create and activate a virtual environment:**
+2. **Create and activate a virtual environment:**
 
     ```sh
     python3 -m venv .venv
     source .venv/bin/activate
     ```
 
-3.  **Install dependencies:**
+3. **Install dependencies:**
 
     The project uses `uv` for dependency management.
 
@@ -61,25 +61,26 @@ To get started with development, you'll need to set up your local environment.
     pip install uv
     uv pip install -e .[dev]
     ```
+
     The `[dev]` extra includes all the dependencies needed for development, such as `ruff` for linting and `pytest` for testing.
 
 ## Code Style and Linting
 
 This project follows the **PEP 8** style guide and uses `ruff` for linting and formatting. Before submitting a pull request, please ensure your code is clean.
 
--   **Check for linting errors:**
+- **Check for linting errors:**
 
     ```sh
     uv run ruff check .
     ```
 
--   **Automatically fix errors:**
+- **Automatically fix errors:**
 
     ```sh
     uv run ruff check . --fix
     ```
 
--   **Format your code:**
+- **Format your code:**
 
     ```sh
     uv run ruff format .
@@ -89,13 +90,13 @@ This project follows the **PEP 8** style guide and uses `ruff` for linting and f
 
 All new features and bug fixes should be accompanied by tests. This project uses `pytest` for testing.
 
--   **Run all tests:**
+- **Run all tests:**
 
     ```sh
     uv run pytest
     ```
 
--   **Run tests for a specific file:**
+- **Run tests for a specific file:**
 
     ```sh
     uv run pytest tests/test_my_feature.py
@@ -109,10 +110,10 @@ If you add a new feature or change an existing one, please update the documentat
 
 When you're ready to submit your pull request, please make sure it meets the following criteria:
 
--   The pull request has a clear and descriptive title.
--   The pull request description explains the changes and references the relevant issue(s).
--   The code is well-commented and follows the project's style guidelines.
--   Tests have been added or updated for the changes.
--   The documentation has been updated.
+- The pull request has a clear and descriptive title.
+- The pull request description explains the changes and references the relevant issue(s).
+- The code is well-commented and follows the project's style guidelines.
+- Tests have been added or updated for the changes.
+- The documentation has been updated.
 
 Thank you for your contribution!

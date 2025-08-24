@@ -294,14 +294,32 @@ class CodeAnalyzerOrchestrator(BaseAgent):
 
     This agent manages a sequence of sub-agents to perform a comprehensive
     analysis of a given code snippet. The workflow is as follows:
-    1.  **Initial Detection:** Language and region tags are detected in parallel.
-
-    2.  **Validation:** Validates the language and region tags, halting on failure.
-    3.  **Code Cleaning:** Comments are removed from the code.
-    4.  **Product Categorization:** The relevant product is identified.
-    5.  **Evaluation:** A two-step process involving a detailed analysis
-        followed by JSON formatting.
-    6.  **Result Processing:** The final output is assembled and cleaned.
+    1.  **Initial Detection (Parallel):** The workflow begins by running language
+        and region tag detection concurrently. This is a fast, deterministic
+        step that gathers essential metadata without incurring LLM costs.
+    2.  **Validation:** After initial detection, a validation step ensures that
+        the detected language is supported and that region tags are present. If
+        validation fails, the entire workflow is halted to prevent unnecessary
+        processing.
+    3.  **Code Cleaning:** The code is stripped of all comments. This ensures the
+        subsequent LLM analysis is focused purely on the executable code,
+        improving the quality and consistency of the evaluation.
+    4.  **Product Categorization:** The agent identifies the primary Google Cloud
+        product associated with the code. It uses a fast, local, rule-based
+        search first and only falls back to an LLM if the initial method fails,
+        optimizing for both speed and accuracy.
+    5.  **Core Evaluation (Sequential):** This is a two-step process:
+        a.  **Initial Analysis:** A powerful LLM, acting as a "Principal
+            Software Engineer," performs a comprehensive, qualitative review of
+            the code. It is equipped with Google Search to verify API usage and
+            best practices.
+        b.  **JSON Formatting:** A second, more lightweight LLM takes the
+            unstructured text from the previous step and meticulously formats it
+            into a structured JSON object.
+    6.  **Result Processing:** The final agent in the workflow processes the raw
+        JSON output. It applies business logic, such as the "single penalty
+        rule" (to avoid duplicate recommendations), and combines all metadata
+        into the final, clean JSON response.
     """
 
     initial_detection_agent: ParallelAgent
