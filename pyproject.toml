@@ -9,7 +9,7 @@ dependencies = [
     "pygments",
     "fastapi",
     "uvicorn[standard]",
-    "google-generativeai",
+    "google-genai",
     "demjson3",
     "httpx",
     "pygments",
