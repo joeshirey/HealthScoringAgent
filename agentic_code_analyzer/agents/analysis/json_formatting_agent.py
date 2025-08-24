@@ -35,4 +35,9 @@ class JsonFormattingAgent(LlmAgent):
             prompt_template = f.read()
 
         # Initialize the LlmAgent with the formatting instruction.
-        super().__init__(instruction=prompt_template, **kwargs)
+        super().__init__(
+            instruction=prompt_template,
+            disallow_transfer_to_parent=True,
+            disallow_transfer_to_peers=True,
+            **kwargs,
+        )
