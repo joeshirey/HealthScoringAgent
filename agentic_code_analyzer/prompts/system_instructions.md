@@ -43,12 +43,20 @@ absolute source of truth for all executable logic, syntax, and API calls.
       the reason.
     * **d.** If it is correct, move on.
 
-3. **Evaluate Other Criteria:** Assess the `CODE_SAMPLE` against the
+3. **Root Cause Analysis & Categorization**: For each identified issue, perform a
+   root cause analysis to determine the most fundamental reason for the problem.
+   Categorize the issue under the single highest-priority criterion according to
+   the **Single Penalty Hierarchy**. For example, if a non-idiomatic pattern
+   (`language_best_practices`) causes a subtle runtime error
+   (`runnability_and_configuration`), the root cause is the runnability issue,
+   and it **MUST** be categorized there.
+
+4. **Evaluate Other Criteria:** Assess the `CODE_SAMPLE` against the
    `comments_and_code_clarity` criterion. Assess the `cleaned_code` against the
    other non-API-related criteria (e.g., `formatting_and_consistency`,
    `language_best_practices`).
 
-4. **Synthesize Final JSON:** Assemble the final JSON object using only the
+5. **Synthesize Final JSON:** Assemble the final JSON object using only the
    verified issues from your analysis. Make sure that an identified issue is
    only addressed in one of the criteria. Do not allow multiple penalties across
    different criteria for the same issue. Make sure it is identified in only a
@@ -146,6 +154,11 @@ common failure patterns.
         non-idiomatic code)
     4. **`formatting_and_consistency`** (e.g., style issues)
 
+* **Examples of Single Penalty Application:**
+    *   **Issue**: The code uses a deprecated method that is also not thread-safe, potentially causing a runtime crash.
+    *   **Incorrect Categorization**: Penalizing under `language_best_practices` (for the deprecated method) AND `runnability_and_configuration` (for the crash risk).
+    *   **Correct Categorization**: Penalize *only* under `runnability_and_configuration` because the risk of a runtime error is the highest-priority consequence. The description of the issue should mention that it stems from a deprecated, non-thread-safe method.
+
 * **Rule of Doubt and Verification:** Claims of run-time or syntax errors MUST
     be treated with extreme skepticism. You MUST follow the `Pre-Analysis Steps`
     to verify syntax. If you cannot cite a specific rule from official
@@ -174,7 +187,7 @@ common failure patterns.
     array MUST be carefully curated. It must not contain duplicate
     recommendations. If multiple recommendations from different criteria address
     the same root cause, they MUST be consolidated into a single, comprehensive
-    instruction in this final list.
+    instruction in this final list that fixes the highest-priority issue.
 
 * **Use the Correct Code Source:** Your assessment of runnability, API usage,
     formatting, and language constructs **MUST** be based strictly on the
@@ -389,6 +402,6 @@ number and severity of issues found.
 
 ## Post Processing once scoring is complete
 
-* Review the issues identified across all of the categories. Double check to ensure that the core rule **Single Penalty Hierarchy:** is not violated. If an issues is being penalized across multiple categories, please update the scoring and follow the **Single Penalty Hierarchy:** rules so it only appears in one category and only impacts the score in a single category.
+* Review the issues identified across all of the categories. Double check to ensure that the core rule **Single Penalty Hierarchy:** is not violated. If an issue is being penalized across multiple categories, you **MUST** move the entire issue to the single highest-priority category and **consolidate** the reasoning, including any relevant context from the lower-priority categories in the final assessment.
 
 </assessment_criteria>
