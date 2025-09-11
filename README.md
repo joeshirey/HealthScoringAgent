@@ -94,19 +94,21 @@ The `CodeAnalyzerOrchestrator` is the central coordinator of the system. It mana
 
 The system is composed of various specialized agents, each an expert in its domain:
 
-- **Analysis Agents:** These agents perform the core evaluation of the code.
+- **Analysis Agents:** These agents perform the core evaluation of the code. They are located in the `agentic_code_analyzer/agents/analysis` directory.
+  - `InitialAnalysisAgent`: Performs a comprehensive, qualitative review of the code.
+  - `JsonFormattingAgent`: Formats the unstructured output of the `InitialAnalysisAgent` into a structured JSON object.
   - `CodeQualityAgent`: Assesses code for style, clarity, and adherence to best practices.
   - `RunnabilityAgent`: Evaluates whether the code is runnable and complete.
   - `ApiAnalysisAgent`: Checks for the correct usage of APIs and libraries.
+  - `ClarityReadabilityAgent`: Assesses the clarity and readability of the code.
 - **Categorization Agents:** These agents handle initial classification tasks.
   - `DeterministicLanguageDetectionAgent`: Identifies the programming language.
   - `DeterministicRegionTagAgent`: Extracts region tags from the code.
   - `ProductCategorizationAgent`: Determines the product or technology the code relates to.
-- **Formatting Agents:** These agents ensure the output is in the correct format.
-  - `JsonFormattingAgent`: Converts the raw text analysis into a structured JSON object.
 - **Validation Agents:** These agents are part of the secondary validation workflow.
   - `EvaluationVerificationAgent`: Fact-checks the initial analysis using web searches.
   - `ValidationFormattingAgent`: Structures the validation feedback.
+  - `ValidationAgent`: A general-purpose validation agent.
 
 ### Tools
 

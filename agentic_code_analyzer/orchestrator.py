@@ -189,6 +189,16 @@ class ResultProcessingAgent(BaseAgent):
     def _deduplicate_criteria(
         self, assessment_output: Dict[str, Any]
     ) -> Dict[str, Any]:
+        """
+        Deduplicates criteria by name.
+
+        Args:
+            assessment_output: The dictionary containing the analysis results,
+                expected to have a 'criteria_breakdown' key.
+
+        Returns:
+            The evaluation output with duplicate criteria removed.
+        """
         if (
             not isinstance(assessment_output, dict)
             or "criteria_breakdown" not in assessment_output
@@ -359,8 +369,13 @@ class CodeAnalyzerOrchestrator(BaseAgent):
         self, ctx: InvocationContext
     ) -> AsyncGenerator[Event, None]:
         """
-        Manually orchestrates the code analysis workflow to allow for
-        conditional halting based on validation.
+        Manually orchestrates the code analysis workflow.
+
+        This method overrides the default `SequentialAgent` behavior to allow for
+        conditional halting. The workflow proceeds step-by-step, and after the
+        `validation_agent` runs, this orchestrator checks its output. If the
+        validation fails, the orchestrator stops the entire process immediately,
+        preventing subsequent agents from running.
         """
         logger.info(f"[{self.name}] Starting code analysis orchestration.")
 

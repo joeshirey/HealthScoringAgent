@@ -23,7 +23,8 @@ graph TD
         A[CodeAnalyzerOrchestrator] --> B(Initial Detection);
         B --> C(Code Cleaning);
         C --> D(Product Categorization);
-        D --> E(Evaluation);
+        D --> E(Analysis);
+        E --> F(Evaluation);
     end
 
     subgraph "Secondary Workflow: Validation"
@@ -99,6 +100,10 @@ The `CodeAnalyzerOrchestrator` is a `SequentialAgent` that defines the primary w
 - **`DeterministicRegionTagAgent`**: A `BaseAgent` that uses regular expressions to find all `[START ...]` and `[END ...]` region tags in the code. This is another deterministic task that is performed without an LLM.
 - **`CodeCleaningAgent`**: A simple utility agent that removes all comments from the code. This is done to ensure that the subsequent analysis is focused on the executable code and not influenced by comments.
 - **`ProductCategorizationAgent`**: A `BaseAgent` that uses a sophisticated local search mechanism to identify the Google Cloud product associated with the code. It falls back to an `LlmAgent` if the local search fails, providing a balance of speed and accuracy.
+- **`ApiAnalysisAgent`**: An `LlmAgent` that checks for the correct usage of APIs and libraries.
+- **`ClarityReadabilityAgent`**: An `LlmAgent` that assesses the clarity and readability of the code.
+- **`CodeQualityAgent`**: An `LlmAgent` that assesses code for style, clarity, and adherence to best practices.
+- **`RunnabilityAgent`**: An `LlmAgent` that evaluates whether the code is runnable and complete.
 
 ### 3.3. Evaluation Agents
 

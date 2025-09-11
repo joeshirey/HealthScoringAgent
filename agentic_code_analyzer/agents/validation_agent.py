@@ -26,7 +26,7 @@ SUPPORTED_LANGUAGES = [
     "Python",
     "Ruby",
     "Terraform",
-    "TypeScript",
+    "Javascript"
 ]
 
 
