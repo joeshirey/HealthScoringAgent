@@ -102,7 +102,7 @@ The system is composed of various specialized agents, each an expert in its doma
   - `ApiAnalysisAgent`: Checks for the correct usage of APIs and libraries.
   - `ClarityReadabilityAgent`: Assesses the clarity and readability of the code.
 - **Categorization Agents:** These agents handle initial classification tasks.
-  - `DeterministicLanguageDetectionAgent`: Identifies the programming language.
+  - `DeterministicLanguageDetectionAgent`: Identifies the programming language based on the file extension.
   - `DeterministicRegionTagAgent`: Extracts region tags from the code.
   - `ProductCategorizationAgent`: Determines the product or technology the code relates to.
 - **Validation Agents:** These agents are part of the secondary validation workflow.

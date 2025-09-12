@@ -120,7 +120,7 @@ async def test_orchestrator_full_run(mock_llm_agents):
 
     initial_state = {
         "code_snippet": code_snippet,
-        "github_link": "http://mock.link",
+        "github_link": "http://mock.link/test.py",
     }
 
     await session_service.create_session(

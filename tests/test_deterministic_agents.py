@@ -44,58 +44,34 @@ class TestDeterministicLanguageDetectionAgent:
     """
 
     @pytest.mark.parametrize(
-        "code, expected_language, test_id",
+        "github_link, expected_language, test_id",
         [
-            # Python: Specific `def` with colon to distinguish from Ruby
-            (
-                "def hello_world(self):\n    print('Hello, Python!')",
-                "Python",
-                "python_simple",
-            ),
-            # Java: Standard class definition
-            (
-                'public class HelloWorld {\n    public static void main(String[] args) {\n        System.out.println("Hello, Java!");\n    }\n}',
-                "Java",
-                "java_simple",
-            ),
-            # Javascript: Using `const` and `console.log` for high confidence
-            (
-                "const x = () => {\n  console.log('Hello, JavaScript!');\n};",
-                "Javascript",
-                "javascript_simple",
-            ),
-            # Ruby: Specific `def` without parentheses/colon and `puts`
-            ("def hello_ruby\n  puts 'Hello, Ruby!'\nend", "Ruby", "ruby_simple"),
-            # C#: Using `namespace` to differentiate from Java
-            (
-                "namespace MyWebApp.Models\n{\n    public class ErrorViewModel\n    {\n        public string RequestId { get; set; }\n\n        public bool ShowRequestId => !string.IsNullOrEmpty(RequestId);\n    }\n}",
-                "C#",
-                "csharp_simple",
-            ),
-            # C++: Using `#include` and `std::` to differentiate
-            (
-                '#include <iostream>\nint main() {\n    std::cout << "Hello, C++!";\n    return 0;\n}',
-                "C++",
-                "cpp_simple",
-            ),
-            # Code that should not match any specific language
-            ("a + b", "Unknown", "unknown_code"),
-            # Empty string should be unknown
-            ("", "Unknown", "empty_string"),
+            ("http://example.com/test.py", "Python", "python_simple"),
+            ("http://example.com/test.java", "Java", "java_simple"),
+            ("http://example.com/test.js", "JavaScript", "javascript_simple"),
+            ("http://example.com/test.rb", "Ruby", "ruby_simple"),
+            ("http://example.com/test.cs", "C#", "csharp_simple"),
+            ("http://example.com/test.cpp", "C++", "cpp_simple"),
+            ("http://example.com/test.txt", "Unknown", "unknown_extension"),
+            ("http://example.com/test", "Unknown", "no_extension"),
         ],
     )
-    async def test_language_detection(self, code, expected_language, test_id):
+    async def test_language_detection(
+        self, github_link, expected_language, test_id
+    ):
         """
         Tests that the agent correctly detects the language of a code snippet
         and updates the session state.
         """
         agent = DeterministicLanguageDetectionAgent(name="lang_detect_test")
-        initial_state = {"code_snippet": code}
+        initial_state = {"github_link": github_link}
 
         session = await run_agent_and_get_event(agent, initial_state)
 
         detected_language = session.state.get("language_detection_agent_output")
-        assert detected_language == expected_language, f"Test failed for {test_id}"
+        assert (
+            detected_language == expected_language
+        ), f"Test failed for {test_id}"
 
 
 @pytest.mark.asyncio

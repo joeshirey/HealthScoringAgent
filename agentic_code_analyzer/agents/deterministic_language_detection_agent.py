@@ -5,8 +5,7 @@ agent for identifying the programming language of a code snippet.
 
 import logging
 import os
-import re
-from typing import AsyncGenerator, Dict, List, Pattern
+from typing import AsyncGenerator, Dict
 from urllib.parse import urlparse
 
 from google.adk.agents import BaseAgent
@@ -44,75 +43,17 @@ FILE_EXTENSION_MAP: Dict[str, str] = {
     ".xml": "Unknown",
 }
 
-# This dictionary contains regular expressions for content-based language
-# detection. It serves as a fallback when file extension analysis is not
-# possible. The order of languages is important to avoid misclassification,
-# with more specific languages appearing before more general ones.
-LANGUAGE_KEYWORDS: Dict[str, List[Pattern[str]]] = {
-    # PHP's opening tag is highly distinctive.
-    "PHP": [
-        re.compile(r"<\?php"),
-        re.compile(r"\bpublic\s+function\s+"),
-        re.compile(r"->\w+"),
-    ],
-    # C#'s `using System;` and namespace syntax are strong indicators.
-    "C#": [
-        re.compile(r"^\s*using\s+System(\.\w*)*;", re.MULTILINE),
-        re.compile(r"\bnamespace\s+[\w\.]+"),
-        re.compile(r"\{\s*get;\s*(private\s*)?set;\s*\}"),
-    ],
-    # Java's `import java.` and main method signature are very specific.
-    "Java": [
-        re.compile(r"^\s*import\s+java\.\w+\.\w+;", re.MULTILINE),
-        re.compile(r"public\s+static\s+void\s+main\s*\(String"),
-    ],
-    # Python's `def` and `import` syntax are common and reliable.
-    "Python": [
-        re.compile(r"^\s*def\s+\w+\(.*\):", re.MULTILINE),
-        re.compile(r"^\s*import\s+(os|sys|re)\b", re.MULTILINE),
-    ],
-    # Go's `package` and `func` keywords are strong signals.
-    "Go": [
-        re.compile(r"^\s*package\s+\w+", re.MULTILINE),
-        re.compile(r"^\s*import\s+\(", re.MULTILINE),
-        re.compile(r"\bfunc\s+\w+\s*\(.*\)\s*\{"),
-    ],
-    # Ruby's `def` syntax is distinct from Python's (no colon).
-    "Ruby": [
-        re.compile(r"^\s*def\s+\w+[^:]*$", re.MULTILINE),
-        re.compile(r'\brequire\s+[\'"]\w+[\'"]'),
-    ],
-    # C++ is often identified by its `#include` directives.
-    "C++": [
-        re.compile(r"^\s*#include\s*<[a-zA-Z0-9]+>", re.MULTILINE),
-        re.compile(r"\bstd::(cout|vector|string)"),
-    ],
-    # Rust has several unique keywords like `fn`, `let mut`, and `use`.
-    "Rust": [
-        re.compile(r"\b(fn|struct|enum|impl|let\s+mut|use\s+std::)\s+"),
-        re.compile(r"println!\s*\("),
-    ],
-    # Terraform's declarative syntax is easy to spot.
-    "Terraform": [
-        re.compile(r"^\s*(resource|provider|variable|output)\s+", re.MULTILINE)
-    ],
-    # Javascript is placed last because its keywords can be ambiguous.
-    "Javascript": [
-        re.compile(r"\b(const|let|var)\s+\w+\s*="),
-        re.compile(r"\bconsole\.log\s*\("),
-    ],
-}
 
 
 class DeterministicLanguageDetectionAgent(BaseAgent):
     """
-    Detects programming language using a deterministic, two-step approach.
+    Detects programming language using a deterministic approach based on file
+    extensions.
 
-    This agent first attempts to identify the language from the file extension
-    of a `github_link` provided in the session state. If this is not possible,
-    it falls back to a keyword-based regular expression analysis of the
-    `code_snippet`. This hybrid approach is fast, reliable, and does not
-    require an LLM.
+    This agent identifies the language from the file extension of a
+    `github_link` provided in the session state. If the extension is not
+    recognized, it defaults to "Unknown". This approach is fast, reliable, and
+    does not require an LLM.
     """
 
     async def _run_async_impl(
@@ -129,46 +70,34 @@ class DeterministicLanguageDetectionAgent(BaseAgent):
             This is a non-yielding generator, required by the base class.
         """
         github_link = ctx.session.state.get("github_link")
-        code_snippet = ctx.session.state.get("code_snippet", "")
-        final_language = ""
+        final_language = "Unknown"
 
-        # Step 1: Attempt to detect the language from the file extension.
-        # This is the most reliable method.
         if github_link:
             try:
                 parsed_url = urlparse(github_link)
                 _, extension = os.path.splitext(parsed_url.path)
-                if extension in FILE_EXTENSION_MAP:
-                    final_language = FILE_EXTENSION_MAP[extension]
+                language = FILE_EXTENSION_MAP.get(extension)
+                if language:
+                    final_language = language
                     logger.info(
                         f"Language identified as '{final_language}' from "
                         f"file extension '{extension}'."
+                    )
+                else:
+                    logger.warning(
+                        f"Unknown file extension '{extension}'. "
+                        "Defaulting to 'Unknown'."
                     )
             except Exception as e:
                 logger.warning(
                     f"Could not parse GitHub link '{github_link}': {e}",
                     exc_info=True,
                 )
-
-        # Step 2: If file extension detection fails, fall back to content analysis.
-        if not final_language:
-            if code_snippet:
-                final_language = "Unknown"
-                logger.info("Falling back to content-based language detection.")
-                for lang, patterns in LANGUAGE_KEYWORDS.items():
-                    if any(pattern.search(code_snippet) for pattern in patterns):
-                        final_language = lang
-                        logger.info(
-                            f"Language identified as '{lang}' by keyword match."
-                        )
-                        break  # Stop after the first successful match.
-            else:
-                final_language = "Unknown"
+        else:
+            logger.warning("No GitHub link provided. Cannot determine language.")
 
         if final_language == "Unknown":
-            logger.warning(
-                "Could not determine language from file extension or keywords."
-            )
+            logger.warning("Could not determine language from file extension.")
 
         # Update the session state with the detected language.
         logger.info(f"Final detected language: {final_language}")

@@ -44,7 +44,7 @@ The system's primary entry point is the `/analyze` API endpoint, which orchestra
 
 1. **Primary Analysis Workflow (`CodeAnalyzerOrchestrator`):** The process begins with the main analysis workflow, which is executed at least once.
    - **Initial Detection (Parallel):** The orchestrator first runs two deterministic agents in parallel to quickly gather basic metadata without incurring LLM costs.
-     - `DeterministicLanguageDetectionAgent`: Identifies the programming language from the file extension or code content.
+     - `DeterministicLanguageDetectionAgent`: Identifies the programming language from the file extension.
      - `DeterministicRegionTagAgent`: Extracts all `[START ...]` and `[END ...]` tags using regular expressions.
    - **Code Cleaning:** The `CodeCleaningAgent` removes all comments from the code snippet. This focuses the subsequent LLM analysis on the functional code, preventing comments from influencing the evaluation.
    - **Product Categorization:** The `ProductCategorizationAgent` identifies the primary Google Cloud product (e.g., "Spanner", "Cloud Storage") associated with the code. It uses a fast, local search-based tool first and only falls back to an LLM call if the initial tool fails, optimizing for both speed and accuracy.
@@ -96,7 +96,7 @@ The `CodeAnalyzerOrchestrator` is a `SequentialAgent` that defines the primary w
 
 ### 3.2. Initial Agents
 
-- **`DeterministicLanguageDetectionAgent`**: A `BaseAgent` that uses the `pygments` library to identify the language of the code snippet. This is a deterministic task that does not require an LLM, making it fast and efficient.
+- **`DeterministicLanguageDetectionAgent`**: A `BaseAgent` that identifies the language of the code snippet based on its file extension. This is a deterministic task that does not require an LLM, making it fast and efficient.
 - **`DeterministicRegionTagAgent`**: A `BaseAgent` that uses regular expressions to find all `[START ...]` and `[END ...]` region tags in the code. This is another deterministic task that is performed without an LLM.
 - **`CodeCleaningAgent`**: A simple utility agent that removes all comments from the code. This is done to ensure that the subsequent analysis is focused on the executable code and not influenced by comments.
 - **`ProductCategorizationAgent`**: A `BaseAgent` that uses a sophisticated local search mechanism to identify the Google Cloud product associated with the code. It falls back to an `LlmAgent` if the local search fails, providing a balance of speed and accuracy.
