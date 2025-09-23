@@ -156,11 +156,10 @@ Follow these instructions to set up and run the Health Scoring Agent locally.
     The project uses `uv` for fast dependency management. The dependencies are listed in `pyproject.toml`.
 
     ```bash
-    pip install uv
     uv pip install -e .
     ```
 
-    *The `-e` flag installs the project in "editable" mode, which is useful for development.*
+    *The `-e` flag installs the project in "editable" mode, which is useful for development. `uv` should be installed as a standalone CLI tool.*
 
 4. **Set up environment variables for Local Development:**
 
@@ -193,10 +192,10 @@ Follow these instructions to set up and run the Health Scoring Agent locally.
     The application is served using `uvicorn`. The `Dockerfile` is configured to run on port `8080` to match Cloud Run's default.
 
     ```bash
-    uvicorn api.main:app --host 0.0.0.0 --port 8080
+    python run_dev.py
     ```
 
-    The API will now be available at `http://0.0.0.0:8080`, and the web interface at `http://0.0.0.0:8080/ui`.
+    This script will start the uvicorn server for you. The API will now be available at `http://0.0.0.0:8080`, and the web interface at `http://0.0.0.0:8080/ui`.
 
 ## ☁️ Deployment
 

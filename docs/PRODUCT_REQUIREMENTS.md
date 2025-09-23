@@ -25,12 +25,25 @@ The system shall evaluate code against the following core criteria:
 - **API Effectiveness and Correctness:** Evaluates the correct and effective use of APIs, including error handling, security, and best practices. This is handled by the `ApiAnalysisAgent`.
 - **Code Quality:** Analyzes formatting, consistency, adherence to language best practices, naming conventions, and code complexity. This is handled by the `CodeQualityAgent`.
 - **Clarity and Readability:** Assesses the clarity and readability of the code, including the use of comments and the overall structure of the code. This is handled by the `ClarityReadabilityAgent`.
+- **LLM Training Fitness:** Evaluates whether the code is a good candidate for training a large language model.
 
-### 3.2. Product Categorization
+### 3.2. Self-Validation and Iterative Refinement
+
+The system shall include a self-validation mechanism to ensure the quality and accuracy of the analysis.
+
+- **Validation Workflow:** After an initial analysis is generated, a separate and independent agentic workflow shall be triggered to validate the output.
+- **Fact-Checking:** The validation agent shall use external tools, such as Google Search, to fact-check the claims and recommendations made in the initial analysis.
+- **Iterative Refinement:** If the validation score is below a configurable threshold, the system shall re-run the entire analysis, providing the validation feedback to the original agents to help them improve their work. This loop shall continue until the analysis meets the quality threshold or a maximum number of attempts is reached.
+
+### 3.3. Product Categorization
 
 The system shall be able to categorize code samples into a specific Google Cloud product. The categorization shall be based on a combination of rules-based logic and a large language model.
 
-### 3.3. Advanced Prompting
+### 3.4. User Interface
+
+The system shall provide a simple web interface for submitting code samples for analysis. The interface shall allow users to paste code directly or provide a GitHub link.
+
+### 3.5. Advanced Prompting
 
 The system shall leverage advanced prompt engineering techniques to guide the Large Language Models (LLMs). This includes:
 

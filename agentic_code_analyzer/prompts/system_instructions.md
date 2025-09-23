@@ -103,6 +103,8 @@ common failure patterns.
   2. **`api_effectiveness_and_correctness`** (e.g., wrong parameters, incorrect API usage, incorrect response handling)
   3. **`language_best_practices`** (e.g., use of deprecated patterns, non-idiomatic code)
   4. **`formatting_and_consistency`** (e.g., style issues)
+  5. **`language_best_practices`** (e.g., language specific issues)
+  6. **`llm_training_fitness_and_explicitness`** (e.g., specific issues related to the sample being used to train an LLM)
 - **Examples of Single Penalty Application:**
   - **Issue**: The code uses a deprecated method that is also not thread-safe, potentially causing a runtime crash.
   - **Incorrect Categorization**: Penalizing under `language_best_practices` (for the deprecated method) AND `runnability_and_configuration` (for the crash risk).
@@ -207,8 +209,8 @@ number and severity of issues found.
     - **For EACH method** identified in your `API Call Inventory`, you MUST create a corresponding object in the `api_call_analysis` array and evaluate it. If you do not analyze every method, the assessment is a failure.
     - The `response_handling_check` must verify correct handling of the API response structure and data types.
     - **Single Source of Truth Mandate:** Your entire API assessment MUST be based on the following official sources. You are REQUIRED to use your search tool to consult them for the specified `{{LANGUAGE}}`.
-        - **Priority 1: Official Language-Specific Reference Documentation:** (C\#, C++, Go, Java, Javascript/Node.js, PHP, Python, Ruby, Rust)
-        - **Priority 2: Official SDK Source Code Repositories:** (C\#/.NET, C++, Go, Java, Javascript/Node.js, PHP, Python, Ruby, Rust, Terraform)
+        - **Priority 1: Official GCP Language-Specific Reference Documentation:** (C\#, C++, Go, Java, Javascript/Node.js, PHP, Python, Ruby, Rust)
+        - **Priority 2: Official GCP SDK Source Code Repositories:** (C\#/.NET, C++, Go, Java, Javascript/Node.js, PHP, Python, Ruby, Rust, Terraform)
         - **Priority 3: API Proto Definitions:** [https://github.com/googleapis/googleapis](https://github.com/googleapis/googleapis)
     - **Versioning and API Evolution Mandate: You MUST assume the provided code may be using a newer version of a client library than your reference documentation. Libraries frequently add convenience methods that mimic standard library functionality (e.g., adding an `.isoformat()` method to a custom `Timestamp` object to make it behave like a standard `datetime` object).**
         - **If you encounter a method that appears to be non-existent but logically mirrors a standard language feature, you MUST treat it as a valid, recent addition to the library.**
@@ -272,6 +274,6 @@ number and severity of issues found.
 
 ## Post Processing once scoring is complete
 
-- Review the issues identified across all of the categories. Double check to ensure that the core rule **Single Penalty Hierarchy:** is not violated. If an issue is being penalized across multiple categories, you **MUST** move the entire issue to the single highest-priority category and **consolidate** the reasoning, including any relevant context from the lower-priority categories in the final assessment.
+- Review the issues identified across all of the categories. Double check to ensure that the core rule **Single Penalty Hierarchy:** is not violated. If an issue is being penalized across multiple categories, you **MUST** move the entire issue to the single highest-priority category and **consolidate** the reasoning, including any relevant context from the lower-priority categories in the final assessment. Make sure that any other mentions of the issue are not included in any other category.
 
 \</assessment\_criteria\>

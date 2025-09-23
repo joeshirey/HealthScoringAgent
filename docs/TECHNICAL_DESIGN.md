@@ -19,23 +19,34 @@ The main components of the system are:
 
 ```mermaid
 graph TD
-    subgraph "Primary Workflow: Code Analysis"
-        A[CodeAnalyzerOrchestrator] --> B(Initial Detection);
-        B --> C(Code Cleaning);
-        C --> D(Product Categorization);
-        D --> E(Analysis);
-        E --> F(Evaluation);
+    subgraph "API Layer"
+        direction LR
+        User[User via UI/API] --> API_Endpoint[/analyze];
+        API_Endpoint -- Invokes --> Loop{Validation Loop};
     end
 
-    subgraph "Secondary Workflow: Validation"
-        G[ValidationOrchestrator] --> H(Evaluation Verification);
-        H --> I(Validation Formatting);
+    subgraph "Main Analysis Workflow"
+        direction TB
+        Loop -- Starts/Restarts --> Orchestrator(CodeAnalyzerOrchestrator);
+        Orchestrator --> Detection[Initial Detection];
+        Detection --> Validation{Validation};
+        Validation -- Passed --> Cleaning[Code Cleaning];
+        Cleaning --> Categorization[Product Categorization];
+        Categorization --> Evaluation[Core Evaluation];
+        Evaluation --> Analysis_JSON([Analysis JSON]);
+        Validation -- Failed --> Final_Response;
     end
 
-    API[API Layer] --> A;
-    A --> API_Response_1[Analysis JSON];
-    API_Response_1 --> G;
-    G --> API_Response_2[Validation JSON];
+    subgraph "Validation Workflow"
+        direction TB
+        Analysis_JSON -- Triggers --> Validation_Orchestrator(ValidationOrchestrator);
+        Validation_Orchestrator --> Verification[Evaluation Verification];
+        Verification --> Formatting[Validation Formatting];
+        Formatting --> Validation_JSON([Validation JSON]);
+    end
+
+    Validation_JSON -- To --> Loop;
+    Loop -- Score OK --> Final_Response[Final Response to User];
 ```
 
 ### 2.1. Workflow
@@ -53,12 +64,12 @@ The system's primary entry point is the `/analyze` API endpoint, which orchestra
      2. `JsonFormattingAgent`: A second, more lightweight LLM agent takes the unstructured text from the previous step and meticulously formats it into a structured JSON object that conforms to the `AnalysisResult` Pydantic model.
 
 2. **Validation Workflow (`ValidationOrchestrator`):** After the primary analysis workflow completes, the API layer immediately initiates a validation workflow to act as a "peer review".
-    - **Verification:** The `EvaluationVerificationAgent`, also acting as a "Principal Software Engineer," receives the original code and the JSON analysis from the first workflow. Its sole mission is to validate the *correctness* of the analysis. It heavily uses the `google_search` tool to fact-check every claim made about API usage, method names, parameters, and error handling. It outputs its findings as unstructured text, starting with a 1-10 score.
-    - **Formatting:** The `ValidationFormattingAgent` takes this unstructured validation text and formats it into a structured JSON object conforming to the `EvaluationValidationOutput` Pydantic model.
+   - **Verification:** The `EvaluationVerificationAgent`, also acting as a "Principal Software Engineer," receives the original code and the JSON analysis from the first workflow. Its sole mission is to validate the *correctness* of the analysis. It heavily uses the `google_search` tool to fact-check every claim made about API usage, method names, parameters, and error handling. It outputs its findings as unstructured text, starting with a 1-10 score.
+   - **Formatting:** The `ValidationFormattingAgent` takes this unstructured validation text and formats it into a structured JSON object conforming to the `EvaluationValidationOutput` Pydantic model.
 
 3. **Iterative Refinement Loop (API Layer):** The API layer inspects the `validation_score` from the validation workflow.
-    - **If Score > 7:** The analysis is considered high quality. The loop terminates, and the final analysis and validation history are returned to the user.
-    - **If Score <= 7:** The analysis is considered flawed. The `reasoning` from the validation is captured and used as feedback. The process returns to step 1, and the `CodeAnalyzerOrchestrator` is invoked again. The feedback is passed into the `InitialAnalysisAgent`'s prompt, instructing it to correct its previous mistakes. This loop continues until the validation score meets the threshold or the `MAX_VALIDATION_LOOPS` environment variable limit is reached.
+   - **If Score > 7:** The analysis is considered high quality. The loop terminates, and the final analysis and validation history are returned to the user.
+   - **If Score <= 7:** The analysis is considered flawed. The `reasoning` from the validation is captured and used as feedback. The process returns to step 1, and the `CodeAnalyzerOrchestrator` is invoked again. The feedback is passed into the `InitialAnalysisAgent`'s prompt, instructing it to correct its previous mistakes. This loop continues until the validation score meets the threshold or the `MAX_VALIDATION_LOOPS` environment variable limit is reached.
 
 ```mermaid
 sequenceDiagram
@@ -137,10 +148,11 @@ This is the core data model for the primary analysis, enforced by the `JsonForma
   "overall_compliance_score": "integer (0-100)",
   "criteria_breakdown": [
     {
-      "criterion_name": "'runnability_and_configuration' | 'api_effectiveness_and_correctness' | ...",
+      "criterion_name": "Literal['runnability_and_configuration', 'api_effectiveness_and_correctness', ...]",
       "score": "integer (0-100)",
       "weight": "float",
-      "assessment": "Union[str, RunnabilityChecks, List[ApiCallAnalysis]]",
+      "assessment": "string",
+      "assessment_details": "Union[str, RunnabilityChecks, List[ApiCallAnalysis]]",
       "recommendations_for_llm_fix": ["string"],
       "generic_problem_categories": ["string"]
     }

@@ -379,13 +379,15 @@ class CodeAnalyzerOrchestrator(BaseAgent):
         """
         logger.info(f"[{self.name}] Starting code analysis orchestration.")
 
-        # Step 1: Initial Detection (Parallel)
+        # Step 1: Initial Detection (Parallel).
+        # This runs language and region tag detection concurrently for efficiency.
         async for event in self.initial_detection_agent.run_async(ctx):
             yield event
         logger.info(f"[{self.name}] Initial detection phase complete.")
 
-        # Step 2: Validation
-        # The validation agent only yields an event if validation fails.
+        # Step 2: Validation.
+        # This agent checks if the detected language is supported and if region
+        # tags were found. If validation fails, the workflow is halted.
         async for event in self.validation_agent.run_async(ctx):
             # The only events yielded are final failure events.
             logger.warning(f"[{self.name}] Validation failed. Halting workflow.")
@@ -394,22 +396,29 @@ class CodeAnalyzerOrchestrator(BaseAgent):
 
         logger.info(f"[{self.name}] Validation passed. Continuing workflow.")
 
-        # Step 3: Code Cleaning
+        # Step 3: Code Cleaning.
+        # Removes comments from the code to focus the LLM analysis on executable
+        # logic.
         async for event in self.code_cleaning_agent.run_async(ctx):
             yield event
         logger.info(f"[{self.name}] Code cleaning complete.")
 
-        # Step 4: Product Categorization
+        # Step 4: Product Categorization.
+        # Identifies the Google Cloud product associated with the code snippet.
         async for event in self.product_categorization_agent.run_async(ctx):
             yield event
         logger.info(f"[{self.name}] Product categorization complete.")
 
-        # Step 5: Evaluation
+        # Step 5: Evaluation.
+        # A two-step process involving a powerful LLM for analysis and a
+        # lightweight LLM for JSON formatting.
         async for event in self.evaluation_agent.run_async(ctx):
             yield event
         logger.info(f"[{self.name}] Evaluation workflow complete.")
 
-        # Step 6: Final Result Processing
+        # Step 6: Final Result Processing.
+        # Cleans the final JSON and applies business logic like the single
+        # penalty rule.
         async for event in self.result_processor.run_async(ctx):
             yield event
         logger.info(f"[{self.name}] Result processing complete.")
