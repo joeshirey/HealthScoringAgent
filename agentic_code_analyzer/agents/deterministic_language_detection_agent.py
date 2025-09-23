@@ -44,7 +44,6 @@ FILE_EXTENSION_MAP: Dict[str, str] = {
 }
 
 
-
 class DeterministicLanguageDetectionAgent(BaseAgent):
     """
     Detects programming language using a deterministic approach based on file

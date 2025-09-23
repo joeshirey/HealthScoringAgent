@@ -56,9 +56,7 @@ class TestDeterministicLanguageDetectionAgent:
             ("http://example.com/test", "Unknown", "no_extension"),
         ],
     )
-    async def test_language_detection(
-        self, github_link, expected_language, test_id
-    ):
+    async def test_language_detection(self, github_link, expected_language, test_id):
         """
         Tests that the agent correctly detects the language of a code snippet
         and updates the session state.
@@ -69,9 +67,7 @@ class TestDeterministicLanguageDetectionAgent:
         session = await run_agent_and_get_event(agent, initial_state)
 
         detected_language = session.state.get("language_detection_agent_output")
-        assert (
-            detected_language == expected_language
-        ), f"Test failed for {test_id}"
+        assert detected_language == expected_language, f"Test failed for {test_id}"
 
 
 @pytest.mark.asyncio
