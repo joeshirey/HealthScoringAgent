@@ -7,6 +7,7 @@ JSON object.
 from typing import Any
 
 from google.adk.agents import LlmAgent
+from agentic_code_analyzer.agents.shared_config import GENERATE_CONTENT_CONFIG
 
 
 class JsonFormattingAgent(LlmAgent):
@@ -39,5 +40,6 @@ class JsonFormattingAgent(LlmAgent):
             instruction=prompt_template,
             disallow_transfer_to_parent=True,
             disallow_transfer_to_peers=True,
+            generate_content_config=GENERATE_CONTENT_CONFIG,
             **kwargs,
         )

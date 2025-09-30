@@ -7,6 +7,7 @@ from typing import Any
 
 from google.adk.agents import LlmAgent
 from google.adk.tools import google_search
+from agentic_code_analyzer.agents.shared_config import GENERATE_CONTENT_CONFIG
 
 
 class InitialAnalysisAgent(LlmAgent):
@@ -44,4 +45,9 @@ class InitialAnalysisAgent(LlmAgent):
         instruction = f"{system_instructions}\n\n{prompt_template}"
 
         # Initialize the LlmAgent with the combined instruction and tools.
-        super().__init__(instruction=instruction, tools=[google_search], **kwargs)
+        super().__init__(
+            instruction=instruction,
+            tools=[google_search],
+            generate_content_config=GENERATE_CONTENT_CONFIG,
+            **kwargs,
+        )

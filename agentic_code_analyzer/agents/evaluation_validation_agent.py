@@ -15,6 +15,7 @@ from google.adk.tools import google_search
 from google.genai.types import Content
 
 from agentic_code_analyzer.validation_model import EvaluationValidationOutput
+from agentic_code_analyzer.agents.shared_config import GENERATE_CONTENT_CONFIG
 
 
 class EvaluationVerificationAgent(LlmAgent):
@@ -46,6 +47,7 @@ class EvaluationVerificationAgent(LlmAgent):
         super().__init__(
             instruction=instruction,
             tools=[google_search],
+            generate_content_config=GENERATE_CONTENT_CONFIG,
             **kwargs,
         )
 
@@ -97,6 +99,7 @@ class ValidationFormattingAgent(LlmAgent):
             output_schema=EvaluationValidationOutput,
             disallow_transfer_to_parent=True,
             disallow_transfer_to_peers=True,
+            generate_content_config=GENERATE_CONTENT_CONFIG,
             **kwargs,
         )
 

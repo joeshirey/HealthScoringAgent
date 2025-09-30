@@ -74,6 +74,10 @@ def _load_product_config() -> Tuple[
 
 # Load the product configuration at module import time.
 PRODUCT_HIERARCHY, ORDERED_PRODUCTS = _load_product_config()
+GENERATE_CONTENT_CONFIG = types.GenerateContentConfig(
+    temperature=0.0,  # Set to 0 for deterministic output.
+    top_p=0.9,
+)
 
 
 def _find_product_by_rules(
@@ -146,19 +150,14 @@ def _categorize_with_llm(
         Based on your analysis, choose the single best-fitting product from the following list:
         {formatted_product_list}
 
-        Return your answer as a single, valid JSON object with two keys: "category" and "product". Do not include any other text or formatting.
+        Return your answer as a a single, valid JSON object with two keys: "category" and "product". Do not include any other text or formatting.
         Example: {{"category": "Databases", "product": "Spanner"}}
         """
-
-        generation_config = types.GenerateContentConfig(
-            temperature=0.0,  # Set to 0 for deterministic output.
-            top_p=0.9,
-        )
 
         response = client.models.generate_content(
             model=os.environ.get("GEMINI_PRO_MODEL", "gemini-2.5-pro"),
             contents=prompt,
-            config=generation_config,
+            generation_config=GENERATE_CONTENT_CONFIG,
         )
 
         # Extract the JSON from the response, even if it's in a markdown block.
