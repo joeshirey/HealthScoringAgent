@@ -124,6 +124,18 @@ async def analyze_code(request: CodeRequest) -> FinalValidatedAnalysisWithHistor
             "github_link": request.github_link or "",
             "feedback_from_validation": feedback_for_next_loop,
         }
+
+        # Ensure we start with a fresh session for this iteration.
+        existing_session = await session_service.get_session(
+            app_name="agentic_code_analyzer", user_id="api_user", session_id=session_id
+        )
+        if existing_session:
+            await session_service.delete_session(
+                app_name="agentic_code_analyzer",
+                user_id="api_user",
+                session_id=session_id,
+            )
+
         await session_service.create_session(
             app_name="agentic_code_analyzer",
             user_id="api_user",
@@ -262,17 +274,25 @@ async def _run_validation(
         name=f"validation_orchestrator_iter_{iteration}"
     )
     # Update the session state with the data needed for validation.
+    # Since we cannot update the session in place with create_session,
+    # we get the state, delete the session, and recreate it.
     session = await session_service.get_session(
         app_name="agentic_code_analyzer", user_id="api_user", session_id=session_id
     )
     if session:
-        session.state["code_snippet"] = code
-        session.state["evaluation_json"] = evaluation
+        current_state = session.state.copy()
+        current_state["code_snippet"] = code
+        current_state["evaluation_json"] = evaluation
+
+        await session_service.delete_session(
+            app_name="agentic_code_analyzer", user_id="api_user", session_id=session_id
+        )
+
         await session_service.create_session(
-            app_name=session.app_name,
-            user_id=session.user_id,
-            session_id=session.id,
-            state=session.state,
+            app_name="agentic_code_analyzer",
+            user_id="api_user",
+            session_id=session_id,
+            state=current_state,
         )
 
     validation_runner = Runner(

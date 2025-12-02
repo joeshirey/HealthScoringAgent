@@ -336,7 +336,8 @@ class CodeAnalyzerOrchestrator(BaseAgent):
     validation_agent: ValidationAgent
     code_cleaning_agent: CodeCleaningAgent
     product_categorization_agent: ProductCategorizationAgent
-    evaluation_agent: SequentialAgent
+    initial_analysis_agent: InitialAnalysisAgent
+    json_formatting_agent: JsonFormattingAgent
     result_processor: ResultProcessingAgent
 
     def __init__(self, **kwargs: Any):
@@ -353,14 +354,28 @@ class CodeAnalyzerOrchestrator(BaseAgent):
         product_categorization_agent = ProductCategorizationAgent(
             name="product_categorization_agent"
         )
-        evaluation_agent = self._create_evaluation_agent()
+        
+        # Initialize evaluation agents directly
+        initial_analysis_agent = InitialAnalysisAgent(
+            name="initial_analysis_agent",
+            output_key="initial_analysis_output",
+            model=os.environ.get("GEMINI_PRO_MODEL", "gemini-2.5-pro"),
+        )
+        json_formatting_agent = JsonFormattingAgent(
+            name="json_formatting_agent",
+            output_key="evaluation_review_agent_output",
+            output_schema=EvaluationOutput,
+            model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-2.5-flash-lite"),
+        )
+
         result_processor = self._create_result_processing_agent()
         super().__init__(
             initial_detection_agent=initial_detection_agent,
             validation_agent=validation_agent,
             code_cleaning_agent=code_cleaning_agent,
             product_categorization_agent=product_categorization_agent,
-            evaluation_agent=evaluation_agent,
+            initial_analysis_agent=initial_analysis_agent,
+            json_formatting_agent=json_formatting_agent,
             result_processor=result_processor,
             **kwargs,
         )
@@ -409,12 +424,23 @@ class CodeAnalyzerOrchestrator(BaseAgent):
             yield event
         logger.info(f"[{self.name}] Product categorization complete.")
 
-        # Step 5: Evaluation.
-        # A two-step process involving a powerful LLM for analysis and a
-        # lightweight LLM for JSON formatting.
-        async for event in self.evaluation_agent.run_async(ctx):
+        # Step 5a: Initial Analysis.
+        # Performs a detailed, tool-based analysis of the code.
+        async for event in self.initial_analysis_agent.run_async(ctx):
+            # Manually apply state delta to the current session object so the
+            # next agent can see it immediately.
+            if event.actions and event.actions.state_delta:
+                ctx.session.state.update(event.actions.state_delta)
             yield event
-        logger.info(f"[{self.name}] Evaluation workflow complete.")
+        logger.info(f"[{self.name}] Initial analysis complete.")
+
+        # Step 5b: JSON Formatting.
+        # Takes the raw review and structures it into a predefined JSON format.
+        async for event in self.json_formatting_agent.run_async(ctx):
+            if event.actions and event.actions.state_delta:
+                ctx.session.state.update(event.actions.state_delta)
+            yield event
+        logger.info(f"[{self.name}] JSON formatting complete.")
 
         # Step 6: Final Result Processing.
         # Cleans the final JSON and applies business logic like the single
@@ -439,38 +465,6 @@ class CodeAnalyzerOrchestrator(BaseAgent):
                 DeterministicLanguageDetectionAgent(name="language_detection_agent"),
                 DeterministicRegionTagAgent(name="region_tag_extraction_agent"),
             ],
-        )
-
-    def _create_evaluation_agent(self) -> SequentialAgent:
-        """
-        Creates the sequential agent for the two-step evaluation process.
-
-        This workflow consists of:
-        1.  `InitialAnalysisAgent`: Performs a detailed, tool-based analysis
-            of the code to generate a raw text review.
-        2.  `JsonFormattingAgent`: Takes the raw review and structures it into a
-            predefined JSON format.
-
-        Returns:
-            A `SequentialAgent` for the core evaluation workflow.
-        """
-        # This agent uses a more powerful model for the core analysis.
-        initial_analysis_agent = InitialAnalysisAgent(
-            name="initial_analysis_agent",
-            output_key="initial_analysis_output",
-            model=os.environ.get("GEMINI_PRO_MODEL", "gemini-2.5-pro"),
-        )
-
-        # This agent uses a faster, lighter model for the formatting task.
-        json_formatting_agent = JsonFormattingAgent(
-            name="json_formatting_agent",
-            output_key="evaluation_review_agent_output",
-            output_schema=EvaluationOutput,
-            model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-2.5-flash-lite"),
-        )
-        return SequentialAgent(
-            name="evaluation_workflow",
-            sub_agents=[initial_analysis_agent, json_formatting_agent],
         )
 
     def _create_result_processing_agent(self) -> ResultProcessingAgent:
