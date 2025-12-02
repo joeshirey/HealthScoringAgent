@@ -14,7 +14,7 @@ from typing import AsyncGenerator, Dict, Any, List, Set
 
 import demjson3
 
-from google.adk.agents import BaseAgent, ParallelAgent, SequentialAgent
+from google.adk.agents import BaseAgent, ParallelAgent
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.events import Event
 from google.genai.types import Content, Part
