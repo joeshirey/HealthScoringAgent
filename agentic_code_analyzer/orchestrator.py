@@ -354,7 +354,7 @@ class CodeAnalyzerOrchestrator(BaseAgent):
         product_categorization_agent = ProductCategorizationAgent(
             name="product_categorization_agent"
         )
-        
+
         # Initialize evaluation agents directly
         initial_analysis_agent = InitialAnalysisAgent(
             name="initial_analysis_agent",
