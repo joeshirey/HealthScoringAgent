@@ -102,5 +102,3 @@ class ValidationFormattingAgent(LlmAgent):
             generate_content_config=GENERATE_CONTENT_CONFIG,
             **kwargs,
         )
-
-
