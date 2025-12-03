@@ -17,6 +17,8 @@ import demjson3
 from google.adk.agents import BaseAgent, ParallelAgent
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.events import Event
+from google.adk.models import Gemini
+from google.genai import Client
 from google.genai.types import Content, Part
 
 from agentic_code_analyzer.models import EvaluationOutput
@@ -356,16 +358,23 @@ class CodeAnalyzerOrchestrator(BaseAgent):
         )
 
         # Initialize evaluation agents directly
+        # Use a custom client with extended timeout for the heavy analysis task
+        analysis_client = Client(http_options={"timeout": 600})
+        analysis_model = Gemini(
+            model_name=os.environ.get("GEMINI_PRO_MODEL", "gemini-2.5-pro"),
+            client=analysis_client,
+        )
+
         initial_analysis_agent = InitialAnalysisAgent(
             name="initial_analysis_agent",
             output_key="initial_analysis_output",
-            model=os.environ.get("GEMINI_PRO_MODEL", "gemini-2.5-pro"),
+            model=analysis_model,
         )
         json_formatting_agent = JsonFormattingAgent(
             name="json_formatting_agent",
             output_key="evaluation_review_agent_output",
             output_schema=EvaluationOutput,
-            model=os.environ.get("GEMINI_FLASH_LITE_MODEL", "gemini-2.5-flash-lite"),
+            model=os.environ.get("GEMINI_PRO_MODEL", "gemini-2.5-pro"),
         )
 
         result_processor = self._create_result_processing_agent()
@@ -426,13 +435,34 @@ class CodeAnalyzerOrchestrator(BaseAgent):
 
         # Step 5a: Initial Analysis.
         # Performs a detailed, tool-based analysis of the code.
+        initial_analysis_text = ""
         async for event in self.initial_analysis_agent.run_async(ctx):
             # Manually apply state delta to the current session object so the
             # next agent can see it immediately.
             if event.actions and event.actions.state_delta:
+                logger.info(
+                    f"[{self.name}] Updating state with delta: {event.actions.state_delta.keys()}"
+                )
                 ctx.session.state.update(event.actions.state_delta)
+
+            # Accumulate text content from the agent's response
+            if event.content and event.content.parts:
+                for part in event.content.parts:
+                    if part.text:
+                        initial_analysis_text += part.text
+
             yield event
-        logger.info(f"[{self.name}] Initial analysis complete.")
+
+        # Explicitly set the output for the next agent if it wasn't set by state_delta
+        if "initial_analysis_output" not in ctx.session.state and initial_analysis_text:
+            logger.info(
+                f"[{self.name}] Explicitly setting initial_analysis_output in state."
+            )
+            ctx.session.state["initial_analysis_output"] = initial_analysis_text
+
+        logger.info(
+            f"[{self.name}] Initial analysis complete. Current state keys: {list(ctx.session.state.keys())}"
+        )
 
         # Step 5b: JSON Formatting.
         # Takes the raw review and structures it into a predefined JSON format.
