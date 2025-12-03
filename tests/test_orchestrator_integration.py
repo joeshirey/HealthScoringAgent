@@ -8,6 +8,12 @@ from google.genai.types import Content, Part
 from agentic_code_analyzer.orchestrator import CodeAnalyzerOrchestrator
 
 
+@pytest.fixture(autouse=True)
+def mock_env(monkeypatch):
+    """Sets a dummy API key for the tests."""
+    monkeypatch.setenv("GOOGLE_API_KEY", "TEST_KEY")
+
+
 @pytest.fixture
 def mock_llm_agents(mocker):
     """Mocks the agents that interact with LLMs."""
