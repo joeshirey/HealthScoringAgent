@@ -21,7 +21,6 @@ from google.adk.models import Gemini
 from google.genai import Client
 from google.genai.types import Content, Part
 
-from agentic_code_analyzer.models import EvaluationOutput
 from agentic_code_analyzer.agents.deterministic_language_detection_agent import (
     DeterministicLanguageDetectionAgent,
 )
