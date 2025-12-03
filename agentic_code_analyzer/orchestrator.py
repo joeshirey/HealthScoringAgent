@@ -373,7 +373,6 @@ class CodeAnalyzerOrchestrator(BaseAgent):
         json_formatting_agent = JsonFormattingAgent(
             name="json_formatting_agent",
             output_key="evaluation_review_agent_output",
-            output_schema=EvaluationOutput,
             model=os.environ.get("GEMINI_PRO_MODEL", "gemini-2.5-pro"),
         )
 

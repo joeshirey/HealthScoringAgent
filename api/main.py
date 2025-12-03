@@ -20,7 +20,7 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 from pydantic import BaseModel
 
-from agentic_code_analyzer.agents.evaluation_validation_agent import (
+from agentic_code_analyzer.validation_orchestrator import (
     ValidationOrchestrator,
 )
 from agentic_code_analyzer.orchestrator import CodeAnalyzerOrchestrator
