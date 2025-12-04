@@ -33,7 +33,9 @@ graph TD
         Validation -- Passed --> Cleaning[Code Cleaning];
         Cleaning --> Categorization[Product Categorization];
         Categorization --> Evaluation[Core Evaluation];
-        Evaluation --> Analysis_JSON([Analysis JSON]);
+        Evaluation --> Formatting[JSON Formatting];
+        Formatting --> Processing[Result Processing];
+        Processing --> Analysis_JSON([Analysis JSON]);
         Validation -- Failed --> Final_Response;
     end
 
@@ -105,21 +107,23 @@ Each agent is a self-contained component responsible for a specific task. Agents
 
 The `CodeAnalyzerOrchestrator` is a `SequentialAgent` that defines the primary workflow. It is responsible for invoking the other agents in the correct order, passing the necessary data between them, and generating the final, consolidated JSON output.
 
-### 3.2. Initial Agents
+### 3.2. Preparation & Categorization Agents
+
+These agents prepare the code for analysis and gather metadata.
 
 - **`DeterministicLanguageDetectionAgent`**: A `BaseAgent` that identifies the language of the code snippet based on its file extension. This is a deterministic task that does not require an LLM, making it fast and efficient.
 - **`DeterministicRegionTagAgent`**: A `BaseAgent` that uses regular expressions to find all `[START ...]` and `[END ...]` region tags in the code. This is another deterministic task that is performed without an LLM.
 - **`CodeCleaningAgent`**: A simple utility agent that removes all comments from the code. This is done to ensure that the subsequent analysis is focused on the executable code and not influenced by comments.
 - **`ProductCategorizationAgent`**: A `BaseAgent` that uses a sophisticated local search mechanism to identify the Google Cloud product associated with the code. It falls back to an `LlmAgent` if the local search fails, providing a balance of speed and accuracy.
-- **`ApiAnalysisAgent`**: An `LlmAgent` that checks for the correct usage of APIs and libraries.
-- **`ClarityReadabilityAgent`**: An `LlmAgent` that assesses the clarity and readability of the code.
-- **`CodeQualityAgent`**: An `LlmAgent` that assesses code for style, clarity, and adherence to best practices.
-- **`RunnabilityAgent`**: An `LlmAgent` that evaluates whether the code is runnable and complete.
+- **`ValidationAgent`**: A gatekeeper agent used within the workflow to ensure that minimum requirements (like a supported language) are met before proceeding to expensive LLM analysis.
 
-### 3.3. Evaluation Agents
+### 3.3. Core Analysis Agents
 
-- **`InitialAnalysisAgent`**: An `LlmAgent` that performs the core analysis of the code. It uses the `consolidated_eval.md` and `system_instructions.md` prompts to generate a comprehensive, unstructured review. This agent is designed to act as a "Principal Software Engineer" and is equipped with Google Search to verify API usage and best practices. It is recommended to use the Gemini Pro model for this task for higher quality analysis.
+These agents perform the deep evaluation of the code.
+
+- **`InitialAnalysisAgent`**: An `LlmAgent` that performs the consolidated core analysis of the code. It uses the `consolidated_eval.md` and `system_instructions.md` prompts to generate a comprehensive, unstructured review covering all criteria (Runnability, API Correctness, Code Quality, etc.). This agent is designed to act as a "Principal Software Engineer" and is equipped with Google Search to verify API usage and best practices. It is recommended to use the Gemini Pro model for this task for higher quality analysis.
 - **`JsonFormattingAgent`**: An `LlmAgent` that takes the unstructured output of the `InitialAnalysisAgent` and formats it into a structured JSON object. It uses the `json_conversion.md` prompt to guide the formatting process. It is recommended to use the Gemini Flash model for this task, as it is a less complex formatting task.
+- **`ResultProcessingAgent`**: A `BaseAgent` that performs deterministic post-processing on the JSON output. It applies the "single penalty rule" (ensuring a recommendation is only listed once across criteria), checks for data consistency, and prepares the final JSON response.
 
 ### 3.4. Validation Agents
 

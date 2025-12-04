@@ -21,11 +21,13 @@ The system is designed to be extensible for analyzing code samples in various pr
 
 The system shall evaluate code against the following core criteria:
 
-- **Runnability and Configuration:** Assesses whether the code is runnable by default, with clear dependency management and secure configuration practices. This is handled by the `RunnabilityAgent`.
-- **API Effectiveness and Correctness:** Evaluates the correct and effective use of APIs, including error handling, security, and best practices. This is handled by the `ApiAnalysisAgent`.
-- **Code Quality:** Analyzes formatting, consistency, adherence to language best practices, naming conventions, and code complexity. This is handled by the `CodeQualityAgent`.
-- **Clarity and Readability:** Assesses the clarity and readability of the code, including the use of comments and the overall structure of the code. This is handled by the `ClarityReadabilityAgent`.
+- **Runnability and Configuration:** Assesses whether the code is runnable by default, with clear dependency management and secure configuration practices.
+- **API Effectiveness and Correctness:** Evaluates the correct and effective use of APIs, including error handling, security, and best practices.
+- **Code Quality:** Analyzes formatting, consistency, adherence to language best practices, naming conventions, and code complexity.
+- **Clarity and Readability:** Assesses the clarity and readability of the code, including the use of comments and the overall structure of the code.
 - **LLM Training Fitness:** Evaluates whether the code is a good candidate for training a large language model.
+
+*Note: While specialized agents for each criterion exist in the codebase, the primary analysis is performed by a consolidated `InitialAnalysisAgent` to ensure context retention and holistic evaluation.*
 
 ### 3.2. Self-Validation and Iterative Refinement
 

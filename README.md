@@ -76,7 +76,8 @@ graph TD
 1. **API Request:** A user submits code via a REST API endpoint (`/analyze` or `/analyze_github_link`).
 2. **Main Orchestrator (`CodeAnalyzerOrchestrator`):** This orchestrator manages the primary analysis workflow.
    - **Phase 1: Initial Analysis:** A parallel agent performs initial tasks like language detection and region tag extraction.
-   - **Phase 2: Core Evaluation:** A sequential agent performs a deep analysis of the code, covering quality, runnability, and API correctness. A separate agent then formats this analysis into a structured JSON object.
+   - **Phase 2: Preparation:** The code is cleaned (comments removed) and categorized by product.
+   - **Phase 3: Core Evaluation:** A powerful "Principal Engineer" agent performs a deep, consolidated analysis of the code, covering quality, runnability, and API correctness. A separate agent then formats this analysis into a structured JSON object.
 3. **Validation Loop (API Layer):**
    - The API triggers a secondary `ValidationOrchestrator`.
    - An `EvaluationVerificationAgent` uses Google Search to verify the claims made in the original evaluation.
@@ -94,21 +95,19 @@ The `CodeAnalyzerOrchestrator` is the central coordinator of the system. It mana
 
 The system is composed of various specialized agents, each an expert in its domain:
 
-- **Analysis Agents:** These agents perform the core evaluation of the code. They are located in the `agentic_code_analyzer/agents/analysis` directory.
-  - `InitialAnalysisAgent`: Performs a comprehensive, qualitative review of the code.
-  - `JsonFormattingAgent`: Formats the unstructured output of the `InitialAnalysisAgent` into a structured JSON object.
-  - `CodeQualityAgent`: Assesses code for style, clarity, and adherence to best practices.
-  - `RunnabilityAgent`: Evaluates whether the code is runnable and complete.
-  - `ApiAnalysisAgent`: Checks for the correct usage of APIs and libraries.
-  - `ClarityReadabilityAgent`: Assesses the clarity and readability of the code.
-- **Categorization Agents:** These agents handle initial classification tasks.
+- **Analysis Agents:** These agents perform the core evaluation of the code.
+  - `InitialAnalysisAgent`: An expert LLM agent that performs a comprehensive, qualitative review of the code, evaluating multiple criteria (runnability, API correctness, code quality, etc.) in a single, consolidated pass.
+  - `JsonFormattingAgent`: An agent specialized in converting the unstructured output of the analysis into a strict, validated JSON format.
+  - `ResultProcessingAgent`: Processes the final JSON to apply business logic, deduplicate findings, and enforce hierarchy rules.
+- **Preparation & Categorization Agents:**
   - `DeterministicLanguageDetectionAgent`: Identifies the programming language based on the file extension.
-  - `DeterministicRegionTagAgent`: Extracts region tags from the code.
-  - `ProductCategorizationAgent`: Determines the product or technology the code relates to.
+  - `DeterministicRegionTagAgent`: Extracts region tags from the code using regex.
+  - `CodeCleaningAgent`: Removes comments to isolate executable code for analysis.
+  - `ProductCategorizationAgent`: Determines the Google Cloud product associated with the code using a hybrid rules-based/LLM approach.
 - **Validation Agents:** These agents are part of the secondary validation workflow.
-  - `EvaluationVerificationAgent`: Fact-checks the initial analysis using web searches.
-  - `ValidationFormattingAgent`: Structures the validation feedback.
-  - `ValidationAgent`: A general-purpose validation agent.
+  - `EvaluationVerificationAgent`: Fact-checks the initial analysis using web searches to verify claims.
+  - `ValidationFormattingAgent`: Structures the verification feedback into a numerical score and reasoning.
+  - `ValidationAgent`: A gatekeeper agent used in the main workflow to ensure pre-requisites (like valid language detection) are met before expensive analysis begins.
 
 ### Tools
 
@@ -185,6 +184,7 @@ Follow these instructions to set up and run the Health Scoring Agent locally.
     GEMINI_FLASH_MODEL="gemini-2.5-flash"
     GEMINI_FLASH_LITE_MODEL="gemini-2.5-flash-lite"
     MAX_VALIDATION_LOOPS=3
+    GITHUB_FETCH_TIMEOUT=30
     ```
 
 5. **Run the application:**
@@ -227,6 +227,8 @@ For deployment, the following environment variables are set directly in the `clo
 - `GEMINI_FLASH_LITE_MODEL`: The name of the Gemini Flash Lite model to use.
 - `MAX_VALIDATION_LOOPS`: The maximum number of times the self-validation loop can run.
 - `GITHUB_FETCH_TIMEOUT`: The timeout in seconds for fetching code from GitHub.
+
+**Note:** While the system includes source files for individual agents like `CodeQualityAgent` and `RunnabilityAgent`, the current orchestrator implementation uses the `InitialAnalysisAgent` to perform a consolidated evaluation of these criteria to optimize for context retention and cost.
 
 ## ↔️ API Reference
 
