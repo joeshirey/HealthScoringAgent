@@ -433,6 +433,12 @@ class CodeAnalyzerOrchestrator(BaseAgent):
 
         # Step 5a: Initial Analysis.
         # Performs a detailed, tool-based analysis of the code.
+
+        # Pre-initialize the output key to ensure it exists for the next agent,
+        # even if this agent yields no output or fails.
+        if "initial_analysis_output" not in ctx.session.state:
+            ctx.session.state["initial_analysis_output"] = ""
+
         initial_analysis_text = ""
         async for event in self.initial_analysis_agent.run_async(ctx):
             # Manually apply state delta to the current session object so the
@@ -452,9 +458,11 @@ class CodeAnalyzerOrchestrator(BaseAgent):
             yield event
 
         # Explicitly set the output for the next agent if it wasn't set by state_delta
-        if "initial_analysis_output" not in ctx.session.state and initial_analysis_text:
+        # We do this even if text is empty to ensure the next agent (JsonFormattingAgent)
+        # doesn't crash due to a missing context variable.
+        if "initial_analysis_output" not in ctx.session.state:
             logger.info(
-                f"[{self.name}] Explicitly setting initial_analysis_output in state."
+                f"[{self.name}] Explicitly setting initial_analysis_output in state (length: {len(initial_analysis_text)})."
             )
             ctx.session.state["initial_analysis_output"] = initial_analysis_text
 

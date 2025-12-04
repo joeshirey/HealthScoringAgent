@@ -15,7 +15,7 @@ def setup_logging() -> None:
     and message. It should be called once when the application starts.
     """
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.ERROR,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         stream=sys.stdout,  # Direct logs to standard output.
     )
